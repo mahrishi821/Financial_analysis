@@ -121,16 +121,36 @@ const DocPlatform: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const newFile: FileItem = {
-        id: uploadedFiles.length + 1,
-        filename: file.name,
-        uploadDate: new Date().toISOString().split("T")[0],
-        uploader: "Current User",
-        size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
-      };
-      setUploadedFiles([newFile, ...uploadedFiles]);
-    }
+
+    if(!file) return;
+
+    if(!selectedCompany){
+        alert("Please select a company before uploading");
+        return;
+       }
+    if(!file.name.endswith(.zip))
+    {
+        alert("Only ZIP files are supported");
+        return;
+        }
+    try{
+        const formData=new FormData();
+        fromData.append("file",file);
+        formData.append("Company",selectedCompany);
+
+        const response =await fetch("http://localhost:8000/api/upload-zip",
+        method:"POST",
+        body:formData,
+        });
+
+        if(!response.ok)
+        {
+            throw new Error("Failed tp upload file")
+            }
+
+       const data=await resposne.json();
+       console.log("upload successfully" : data);
+       
   };
 
   return (
