@@ -153,29 +153,30 @@ class DocumentUploadView(APIView):
             )
 
             # Extract files
-            extracted_files = []
-            extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', str(doc_upload.id))
-            os.makedirs(extract_path, exist_ok=True)
-
-            zip_temp_path = doc_upload.zip_file.path
-            with zipfile.ZipFile(zip_temp_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
-                for filename in zip_ref.namelist():
-                    extracted_file_path = os.path.join(extract_path, filename)
-
-                    # Save ExtractedDocument model (if defined)
-                    if os.path.isfile(extracted_file_path):
-                        with open(extracted_file_path, 'rb') as f:
-                            content = ContentFile(f.read(), name=filename)
-
-                            ExtractedDocument.objects.create(
-                                document_upload=doc_upload,
-                                filename=filename,
-                                file=content
-                            )
-
-            # Serialize with nested extracted files
-            serializer = DocumentUploadSerializer(doc_upload)
-            return JSONResponseSender.send_success(serializer.data)
+            # extracted_files = []
+            # extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', str(doc_upload.id))
+            # os.makedirs(extract_path, exist_ok=True)
+            #
+            # zip_temp_path = doc_upload.zip_file.path
+            # with zipfile.ZipFile(zip_temp_path, 'r') as zip_ref:
+            #     zip_ref.extractall(extract_path)
+            #     for filename in zip_ref.namelist():
+            #         extracted_file_path = os.path.join(extract_path, filename)
+            #
+            #         # Save ExtractedDocument model (if defined)
+            #         if os.path.isfile(extracted_file_path):
+            #             with open(extracted_file_path, 'rb') as f:
+            #                 content = ContentFile(f.read(), name=filename)
+            #
+            #                 ExtractedDocument.objects.create(
+            #                     document_upload=doc_upload,
+            #                     filename=filename,
+            #                     file=content
+            #                 )
+            #
+            # # Serialize with nested extracted files
+            # serializer = DocumentUploadSerializer(doc_upload)
+            # return JSONResponseSender.send_success(serializer.data)
+            return JSONResponseSender.send_success("uploaded successfully")
         except Company.DoesNotExist:
             return JSONResponseSender.send_error('500', 'Error processing zip file.',)
