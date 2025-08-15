@@ -50,29 +50,28 @@ const AuthPage = () => {
   const validateForm = () => {
     const newErrors: Partial<FormDataType> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-       newErrors.email = 'Enter a valid email';
-     }
+            if (!formData.email.trim()) {
+          newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+          newErrors.email = 'Enter a valid email';
+        }
 
+        if (!formData.password) {
+          newErrors.password = 'Password is required';
+        } else if (formData.password.length < 6) {
+          newErrors.password = 'Password must be at least 6 characters';
+        }
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (!isLogin) {
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password';
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
-      }
-    }
+        if (!isLogin) {
+          if (!formData.name.trim()) {
+            newErrors.name = 'Name is required';
+          }
+          if (!formData.confirmPassword) {
+            newErrors.confirmPassword = 'Please confirm your password';
+          } else if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match';
+          }
+        }
 
     setErrors({
       name: newErrors.name || '',
@@ -92,19 +91,49 @@ const AuthPage = () => {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      console.log('Form submitted:', {
-        ...formData,
-        rememberMe,
-        mode: isLogin ? 'login' : 'signup'
+      if (isLogin) {
+      const res = await fetch('http://localhost:8000/api/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Login failed');
+      }
+      console.log('Login successful:', data);
+      if (data.access) {
+        localStorage.setItem('token', data.access);
+      }
+    } else {
+      const res = await fetch('http://localhost:8000/api/signup/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          password: formData.password,
+          confirm_password: formData.confirmPassword
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Signup failed');
+      }
+      console.log('Signup successful:', data);
+    }
+
+
 
       setFormData({ name: '', email: '', password: '', confirmPassword: '' });
       setRememberMe(false);
       router.push('/dashboard');
     } catch (error) {
       console.error('Submission error:', error);
+      alert(error.message);
     } finally {
       setIsLoading(false);
     }
