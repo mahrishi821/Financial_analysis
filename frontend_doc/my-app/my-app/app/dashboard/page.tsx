@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState ,useEffect} from "react";
 import {
   Upload,
   FileText,
@@ -22,11 +22,31 @@ interface FileItem {
   size: string;
 }
 
+
+
 const DocPlatform: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"onboarding" | "upload">(
+    const [companies, setCompanies] = useState<{ id: number; company_name: string }[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<string>("");
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+    const [activeTab, setActiveTab] = useState<"onboarding" | "upload">(
     "onboarding"
   );
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
+
+  useEffect(() => {
+     const fetchCompanies = async () => {
+       try {
+         const response = await fetch("http://localhost:8000/api/companies/");
+         if (!response.ok) throw new Error("Failed to fetch companies");
+         const data = await response.json();
+         setCompanies(data);
+       } catch (error) {
+         console.error("Error fetching companies:", error);
+       }
+     };
+     fetchCompanies();
+   }, []);
+
 
   const [formData, setFormData] = useState({
     company_name: "",
@@ -118,40 +138,80 @@ const DocPlatform: React.FC = () => {
   }
 };
 
+ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0] || null;
+  setSelectedFile(file);
+};
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+const handleUploadClick = async () => {
+  if (!selectedFile) {
+    alert("Please choose a file first");
+    return;
+  }
+  if (!selectedCompany) {
+    alert("Please select a company before uploading");
+    return;
+  }
+  if (!selectedFile.name.endsWith(".zip")) {
+    alert("Only ZIP files are supported");
+    return;
+  }
+  try {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    formData.append("company", selectedCompany);
+    formData.append("company_id", selectedCompany);
+    const response = await fetch("http://localhost:8000/api/upload-zip/", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error("Failed to upload file");
+    }
+    const data = await response.json();
+    console.log("Upload successful", data);
+    alert("File uploaded successfully!");
+    setSelectedFile(null);
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    alert("Error uploading file.");
+  }
+};
 
-    if(!file) return;
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0] || null;
+  if (!file) {
+    alert("Please choose a file first");
+    return;
+  }
+  if (!selectedCompany) {
+    alert("Please select a company before uploading");
+    return;
+  }
+  if (!file.name.endsWith(".zip")) {
+    alert("Only ZIP files are supported");
+    return;
+  }
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("company", selectedCompany);
+    const response = await fetch("http://localhost:8000/api/upload-zip/", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error("Failed to upload file");
+    }
+    const data = await response.json();
+    console.log("Upload successful", data);
+    alert("File uploaded successfully!");
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    alert("Error uploading file.");
+  }
+};
 
-    if(!selectedCompany){
-        alert("Please select a company before uploading");
-        return;
-       }
-    if(!file.name.endswith(.zip))
-    {
-        alert("Only ZIP files are supported");
-        return;
-        }
-    try{
-        const formData=new FormData();
-        fromData.append("file",file);
-        formData.append("Company",selectedCompany);
-
-        const response =await fetch("http://localhost:8000/api/upload-zip",
-        method:"POST",
-        body:formData,
-        });
-
-        if(!response.ok)
-        {
-            throw new Error("Failed tp upload file")
-            }
-
-       const data=await resposne.json();
-       console.log("upload successfully" : data);
-       
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -425,61 +485,59 @@ const DocPlatform: React.FC = () => {
             </div>
 
             {/* Company Selector */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Company <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full md:w-1/2 px-3 py-2 border rounded-lg"
-              >
-                <option value="">-- Choose a company --</option>
-                <option value="Acme Corp">Acme Corp</option>
-                <option value="Globex Inc.">Globex Inc.</option>
-                <option value="Initech">Initech</option>
-                <option value="Hooli">Hooli</option>
-              </select>
-            </div>
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Company <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        value={selectedCompany}
+                        onChange={(e) => setSelectedCompany(e.target.value)}
+                        className="w-full md:w-1/2 px-3 py-2 border rounded-lg"
+                    >
+                        <option value="">-- Choose a company --</option>
+                        {companies.map((company) => (
+                           <option key={company.id} value={company.id}>
+                             {company.company_name}
+                           </option>
+                         ))}
+                    </select>
+                </div>
 
             {/* Upload Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Upload className="w-5 h-5 mr-2 text-blue-600" />
-                  Upload New Documents
-                </h3>
-              </div>
-
-              <div className="p-6">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">
-                    Upload ZIP File
-                  </h4>
-                  <p className="text-gray-600 mb-4">
-                    Drag and drop your ZIP file here, or click to browse
-                  </p>
-                  <input
-                    type="file"
-                    // accept=".zip"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 cursor-pointer transition-colors"
-                  >
-                    Choose File
-                  </label>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Supported formats: ZIP files containing Excel, Word, PDF,
-                    PPT documents
-                  </p>
-                </div>
-              </div>
-            </div>
+                       <div
+                              className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8"
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const file = e.dataTransfer.files[0];
+                                if (file) handleFileUpload({ target: { files: [file] } } as any);
+                              }}
+                            >
+                              <div className="p-6">
+                                <div
+                                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-blue-400 transition-colors cursor-pointer"
+                                  onClick={() => document.getElementById("file-upload")?.click()}
+                                >
+                                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                  <h4 className="text-lg font-medium text-gray-900 mb-2">
+                                    Upload ZIP File
+                                  </h4>
+                                  <p className="text-gray-600 mb-4">
+                                    Drag and drop your ZIP file here, or click to browse
+                                  </p>
+                                  <input
+                                    type="file"
+                                    accept=".zip"
+                                    onChange={handleFileUpload}
+                                    className="hidden"
+                                    id="file-upload"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-2">
+                                    Supported formats: ZIP files containing Excel, Word, PDF, PPT documents
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
 
             {/* Uploaded Files List */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">

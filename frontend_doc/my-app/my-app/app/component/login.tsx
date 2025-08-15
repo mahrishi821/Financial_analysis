@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Lock, Loader2, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Loader2, CheckCircle,Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const AuthPage = () => {
@@ -11,20 +11,23 @@ const AuthPage = () => {
   const [rememberMe, setRememberMe] = useState(false);
 
   type FormDataType = {
-    username: string;
+    name: string;
+    email: string;
     password: string;
     confirmPassword: string;
   };
   const router=useRouter();
 
   const [formData, setFormData] = useState<FormDataType>({
-    username: '',
+    name: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
 
   const [errors, setErrors] = useState<FormDataType>({
-    username: '',
+    name: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -47,9 +50,15 @@ const AuthPage = () => {
   const validateForm = () => {
     const newErrors: Partial<FormDataType> = {};
 
-    if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
     }
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+       newErrors.email = 'Enter a valid email';
+     }
+
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -66,7 +75,8 @@ const AuthPage = () => {
     }
 
     setErrors({
-      username: newErrors.username || '',
+      name: newErrors.name || '',
+      email: newErrors.email || '',
       password: newErrors.password || '',
       confirmPassword: newErrors.confirmPassword || ''
     });
@@ -90,7 +100,7 @@ const AuthPage = () => {
         mode: isLogin ? 'login' : 'signup'
       });
 
-      setFormData({ username: '', password: '', confirmPassword: '' });
+      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
       setRememberMe(false);
       router.push('/dashboard');
     } catch (error) {
@@ -102,8 +112,8 @@ const AuthPage = () => {
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
-    setFormData({ username: '', password: '', confirmPassword: '' });
-    setErrors({ username: '', password: '', confirmPassword: '' });
+     setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      setErrors({ name: '', email: '', password: '', confirmPassword: '' });
     setShowPassword(false);
     setShowConfirmPassword(false);
   };
@@ -148,31 +158,59 @@ const AuthPage = () => {
           </div>
 
           <div className="space-y-6">
-            {/* Username Field */}
+            {/* Name Field */}
+            {!isLogin &&(
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
-                  name="username"
-                  value={formData.username}
+                  name="name"
+                  value={formData.name}
                   onChange={handleInputChange}
                   className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.username ? 'border-red-300' : 'border-gray-300'
+                    errors.name ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter your username"
+                  placeholder="Enter your name"
                 />
               </div>
-              {errors.username && (
+              {errors.name && (
                 <p className="mt-2 text-sm text-red-600 flex items-center">
                   <span className="w-4 h-4 mr-1">⚠</span>
-                  {errors.username}
+                  {errors.name}
+                </p>
+              )}
+            </div>)}
+
+            {/* Email Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    errors.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter your email"
+                />
+              </div>
+              {errors.email && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-4 h-4 mr-1">⚠</span>
+                  {errors.email}
                 </p>
               )}
             </div>
+
 
             {/* Password Field */}
             <div>
