@@ -105,8 +105,9 @@ const AuthPage = () => {
         throw new Error(data.detail || 'Login failed');
       }
       console.log('Login successful:', data);
-      if (data.access) {
-        localStorage.setItem('token', data.access);
+      if (data.access && data.refresh) {
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
       }
     } else {
       const res = await fetch('http://localhost:8000/api/signup/', {

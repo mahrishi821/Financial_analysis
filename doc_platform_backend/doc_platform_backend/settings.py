@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -43,7 +44,39 @@ INSTALLED_APPS = [
     'rest_framework',
     'documents',
      'common',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 ]
+
+AUTH_USER_MODEL = 'common.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',     # unauthenticated (signup/login)
+        'rest_framework.throttling.UserRateThrottle',     # authenticated
+        'rest_framework.throttling.ScopedRateThrottle',   # per-view scopes if you want
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/min',        # tune these for your system
+        'user': '100/min',
+        # example per-view scopes:
+        'signup': '5/min',
+        'login':  '10/min',
+    },
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,           # rotate on refresh
+    "BLACKLIST_AFTER_ROTATION": True,         # requires token_blacklist app
+    "UPDATE_LAST_LOGIN": True,                # optional: updates last_login
+    # If your USERNAME_FIELD is 'email', SimpleJWT uses it automatically.
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
