@@ -1,5 +1,5 @@
 "use client";
-import React, { useState ,useEffect} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Upload,
   FileText,
@@ -12,6 +12,10 @@ import {
   CheckCircle,
   Download,
   Eye,
+  Menu,
+  X,
+  LogOut,
+  User
 } from "lucide-react";
 
 interface FileItem {
@@ -22,31 +26,70 @@ interface FileItem {
   size: string;
 }
 
-
+interface UserProfile {
+  name: string;
+  surname: string;
+  dateOfBirth: string;
+  email: string;
+  phone: string;
+  profilePicture?: string;
+}
 
 const DocPlatform: React.FC = () => {
-    const [companies, setCompanies] = useState<{ id: number; company_name: string }[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<string>("");
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [companies, setCompanies] = useState<{ id: number; company_name: string }[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<"onboarding" | "upload">("onboarding");
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const sideMenuRef = useRef<HTMLDivElement>(null);
 
-    const [activeTab, setActiveTab] = useState<"onboarding" | "upload">(
-    "onboarding"
-  );
+  // Mock user profile data - can be replaced with API call later
+  const [userProfile] = useState<UserProfile>({
+    name: "John",
+    surname: "Doe",
+    dateOfBirth: "1990-05-15",
+    email: "john.doe@company.com",
+    phone: "+1 (555) 123-4567",
+    profilePicture: "" // Empty for placeholder
+  });
 
   useEffect(() => {
-     const fetchCompanies = async () => {
-       try {
-         const response = await fetch("http://localhost:8000/api/companies/");
-         if (!response.ok) throw new Error("Failed to fetch companies");
-         const data = await response.json();
-         setCompanies(data);
-       } catch (error) {
-         console.error("Error fetching companies:", error);
-       }
-     };
-     fetchCompanies();
-   }, []);
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/companies/");
+        if (!response.ok) throw new Error("Failed to fetch companies");
+        const data = await response.json();
+        setCompanies(data);
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+      }
+    };
+    fetchCompanies();
+  }, []);
 
+  // Handle clicking outside the side menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sideMenuRef.current && !sideMenuRef.current.contains(event.target as Node)) {
+        setIsSideMenuOpen(false);
+      }
+    };
+
+    if (isSideMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSideMenuOpen]);
+
+  // Handle logout
+  const handleLogout = () => {
+    console.log("User logged out");
+    setIsSideMenuOpen(false);
+    // Add actual logout logic here later
+  };
 
   const [formData, setFormData] = useState({
     company_name: "",
@@ -94,132 +137,228 @@ const DocPlatform: React.FC = () => {
     });
   };
 
-  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   console.log("Form submitted:", formData);
-  //   // API call or further handling logic here
-  // };
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const response = await fetch("http://localhost:8000/api/companies/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const response = await fetch("http://localhost:8000/api/companies/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    if (!response.ok) {
-      throw new Error("Failed to submit form");
+      if (!response.ok) {
+        throw new Error("Failed to submit form");
+      }
+
+      const data = await response.json();
+      console.log("Success:", data);
+      alert("Company onboarded successfully!");
+
+      setFormData({
+        company_name: "",
+        sector: "",
+        sub_sector: "",
+        country: "",
+        incorporation_date: "",
+        contact_person_name: "",
+        contact_email: "",
+        phone: "",
+        frequency: "",
+        status: "Active",
+      });
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error onboarding company.");
     }
+  };
 
-    const data = await response.json();
-    console.log("Success:", data);
-    alert("Company onboarded successfully!");
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+  };
 
-    // Optionally reset form
-    setFormData({
-      company_name: "",
-      sector: "",
-      sub_sector: "",
-      country: "",
-      incorporation_date: "",
-      contact_person_name: "",
-      contact_email: "",
-      phone: "",
-      frequency: "",
-      status: "Active",
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Error onboarding company.");
-  }
-};
-
- const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0] || null;
-  setSelectedFile(file);
-};
-
-const handleUploadClick = async () => {
-  if (!selectedFile) {
-    alert("Please choose a file first");
-    return;
-  }
-  if (!selectedCompany) {
-    alert("Please select a company before uploading");
-    return;
-  }
-  if (!selectedFile.name.endsWith(".zip")) {
-    alert("Only ZIP files are supported");
-    return;
-  }
-  try {
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("company", selectedCompany);
-    formData.append("company_id", selectedCompany);
-    const response = await fetch("http://localhost:8000/api/upload-zip/", {
-      method: "POST",
-      body: formData,
-    });
-    if (!response.ok) {
-      throw new Error("Failed to upload file");
+  const handleUploadClick = async () => {
+    if (!selectedFile) {
+      alert("Please choose a file first");
+      return;
     }
-    const data = await response.json();
-    console.log("Upload successful", data);
-    alert("File uploaded successfully!");
-    setSelectedFile(null);
-  } catch (error) {
-    console.error("Error uploading file:", error);
-    alert("Error uploading file.");
-  }
-};
-
-const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0] || null;
-  if (!file) {
-    alert("Please choose a file first");
-    return;
-  }
-  if (!selectedCompany) {
-    alert("Please select a company before uploading");
-    return;
-  }
-  if (!file.name.endsWith(".zip")) {
-    alert("Only ZIP files are supported");
-    return;
-  }
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("company", selectedCompany);
-    const response = await fetch("http://localhost:8000/api/upload-zip/", {
-      method: "POST",
-      body: formData,
-    });
-    if (!response.ok) {
-      throw new Error("Failed to upload file");
+    if (!selectedCompany) {
+      alert("Please select a company before uploading");
+      return;
     }
-    const data = await response.json();
-    console.log("Upload successful", data);
-    alert("File uploaded successfully!");
-  } catch (error) {
-    console.error("Error uploading file:", error);
-    alert("Error uploading file.");
-  }
-};
+    if (!selectedFile.name.endsWith(".zip")) {
+      alert("Only ZIP files are supported");
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("company", selectedCompany);
+      formData.append("company_id", selectedCompany);
+      const response = await fetch("http://localhost:8000/api/upload-zip/", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to upload file");
+      }
+      const data = await response.json();
+      console.log("Upload successful", data);
+      alert("File uploaded successfully!");
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Error uploading file.");
+    }
+  };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      alert("Please choose a file first");
+      return;
+    }
+    if (!selectedCompany) {
+      alert("Please select a company before uploading");
+      return;
+    }
+    if (!file.name.endsWith(".zip")) {
+      alert("Only ZIP files are supported");
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("company", selectedCompany);
+      const response = await fetch("http://localhost:8000/api/upload-zip/", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to upload file");
+      }
+      const data = await response.json();
+      console.log("Upload successful", data);
+      alert("File uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Error uploading file.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Overlay for mobile when side menu is open */}
+      {isSideMenuOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"></div>
+      )}
+
+      {/* Side Menu */}
+      <div
+        ref={sideMenuRef}
+        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
+          isSideMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Side Menu Header */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
+          <button
+            onClick={() => setIsSideMenuOpen(false)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* User Profile Section */}
+        <div className="p-6 space-y-4">
+          {/* Profile Picture */}
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
+              {userProfile.profilePicture ? (
+                <img
+                  src={userProfile.profilePicture}
+                  alt="Profile"
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-10 h-10 text-gray-400" />
+              )}
+            </div>
+          </div>
+
+          {/* Profile Information */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Full Name
+              </label>
+              <p className="text-gray-900 font-medium">
+                {userProfile.name} {userProfile.surname}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Date of Birth
+              </label>
+              <div className="flex items-center text-gray-700">
+                <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                {new Date(userProfile.dateOfBirth).toLocaleDateString()}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Email
+              </label>
+              <div className="flex items-center text-gray-700">
+                <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                <span className="text-sm">{userProfile.email}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Phone
+              </label>
+              <div className="flex items-center text-gray-700">
+                <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                {userProfile.phone}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Logout Button */}
+        <div className="absolute bottom-6 left-6 right-6">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <LogOut className="w-5 h-5 mr-2" />
+            Logout
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
+              {/* Menu Toggle Button */}
+              <button
+                onClick={() => setIsSideMenuOpen(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors lg:mr-2"
+              >
+                <Menu className="w-5 h-5 text-gray-600" />
+              </button>
+
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
@@ -263,10 +402,7 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
               </p>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white rounded-xl shadow-sm border border-gray-200"
-            >
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                   <Building className="w-5 h-5 mr-2 text-blue-600" />
@@ -460,7 +596,10 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 {/* Submit Button */}
                 <div className="flex justify-end pt-6 border-t border-gray-200">
                   <button
-                    type="submit"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleSubmit(e as any);
+                    }}
                     className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center"
                   >
                     <CheckCircle className="w-5 h-5 mr-2" />
@@ -468,7 +607,7 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   </button>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
         )}
 
@@ -485,59 +624,59 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
             </div>
 
             {/* Company Selector */}
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Select Company <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        value={selectedCompany}
-                        onChange={(e) => setSelectedCompany(e.target.value)}
-                        className="w-full md:w-1/2 px-3 py-2 border rounded-lg"
-                    >
-                        <option value="">-- Choose a company --</option>
-                        {companies.map((company) => (
-                           <option key={company.id} value={company.id}>
-                             {company.company_name}
-                           </option>
-                         ))}
-                    </select>
-                </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Company <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedCompany}
+                onChange={(e) => setSelectedCompany(e.target.value)}
+                className="w-full md:w-1/2 px-3 py-2 border rounded-lg"
+              >
+                <option value="">-- Choose a company --</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.company_name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Upload Section */}
-                       <div
-                              className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8"
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                const file = e.dataTransfer.files[0];
-                                if (file) handleFileUpload({ target: { files: [file] } } as any);
-                              }}
-                            >
-                              <div className="p-6">
-                                <div
-                                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-blue-400 transition-colors cursor-pointer"
-                                  onClick={() => document.getElementById("file-upload")?.click()}
-                                >
-                                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                  <h4 className="text-lg font-medium text-gray-900 mb-2">
-                                    Upload ZIP File
-                                  </h4>
-                                  <p className="text-gray-600 mb-4">
-                                    Drag and drop your ZIP file here, or click to browse
-                                  </p>
-                                  <input
-                                    type="file"
-                                    accept=".zip"
-                                    onChange={handleFileUpload}
-                                    className="hidden"
-                                    id="file-upload"
-                                  />
-                                  <p className="text-xs text-gray-500 mt-2">
-                                    Supported formats: ZIP files containing Excel, Word, PDF, PPT documents
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
+            <div
+              className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) handleFileUpload({ target: { files: [file] } } as any);
+              }}
+            >
+              <div className="p-6">
+                <div
+                  className="p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-blue-400 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById("file-upload")?.click()}
+                >
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">
+                    Upload ZIP File
+                  </h4>
+                  <p className="text-gray-600 mb-4">
+                    Drag and drop your ZIP file here, or click to browse
+                  </p>
+                  <input
+                    type="file"
+                    accept=".zip"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Supported formats: ZIP files containing Excel, Word, PDF, PPT documents
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Uploaded Files List */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
