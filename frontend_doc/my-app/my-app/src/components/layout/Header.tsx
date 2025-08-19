@@ -3,7 +3,7 @@ import React from "react";
 import { FileText, Menu } from "lucide-react";
 
 type Props = {
-  activeTab: "onboarding" | "upload" | "financial";
+  activeTab: "reportGenerator"|"onboarding" | "upload" | "financial";
   setActiveTab: (t: Props["activeTab"]) => void;
   onMenuClick: () => void;
 };
@@ -22,7 +22,7 @@ const Header: React.FC<Props> = ({ activeTab, setActiveTab, onMenuClick }) => (
           <h1 className="text-xl font-bold text-gray-900">Doc::</h1>
         </div>
         <nav className="flex space-x-2 sm:space-x-8">
-          {(["onboarding", "upload", "financial"] as const).map(tab => (
+          {(["reportGenerator","onboarding", "upload", "financial"] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -30,7 +30,7 @@ const Header: React.FC<Props> = ({ activeTab, setActiveTab, onMenuClick }) => (
                 activeTab === tab ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {tab === "onboarding" ? "Company Onboarding" : tab === "upload" ? "Document Management" : "Financial Data Ingestion"}
+              {tab=="reportGenerator"?"Financial Report Generator":tab === "onboarding" ? "Company Onboarding" : tab === "upload" ? "Document Management" : "Financial Data Ingestion"}
             </button>
           ))}
         </nav>

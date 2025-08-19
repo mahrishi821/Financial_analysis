@@ -6,11 +6,14 @@ import UserProfile from "@/components/profile/UserProfile";
 import OnboardingForm from "@/features/onboarding/components/OnboardingForm";
 import DocumentManager from "@/features/documents/components/DocumentManager";
 import FinancialIngestion from "@/features/financials/components/FinancialIngestion";
+import FinancialReportGenerator from "@/features/reports_generator/FinancialReportGenerator";
 
-type ActiveTab = "onboarding" | "upload" | "financial";
+// Add FinancialReportGenerator as a tab option
+type ActiveTab = "reportGenerator" | "onboarding" | "upload" | "financial";
 
 export default function DocPlatformPage() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("onboarding");
+  // Default tab is set to report generator
+  const [activeTab, setActiveTab] = useState<ActiveTab>("reportGenerator");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
 
   return (
@@ -19,9 +22,14 @@ export default function DocPlatformPage() {
         <UserProfile />
       </Sidebar>
 
-      <Header activeTab={activeTab} setActiveTab={setActiveTab} onMenuClick={() => setIsSideMenuOpen(true)} />
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onMenuClick={() => setIsSideMenuOpen(true)}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === "reportGenerator" && <FinancialReportGenerator />}
         {activeTab === "onboarding" && <OnboardingForm />}
         {activeTab === "upload" && <DocumentManager />}
         {activeTab === "financial" && <FinancialIngestion />}
