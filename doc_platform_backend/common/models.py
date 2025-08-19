@@ -36,8 +36,8 @@ class UserManager(BaseUserManager):
         """ optional::  for get all the user even which are deleted also"""
         return super().get_queryset()
 class User(AbstractBaseUser,PermissionsMixin):
-
-    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    """ users"""
+    unique_id=models.UUIDField(unique=True,default=uuid.uuid4,editable=False)
     created_at=models.DateTimeField(default=datetime.now)
     updated_at=models.DateTimeField(auto_now=True)
     deleted_at=models.DateTimeField(null=True)

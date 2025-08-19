@@ -100,3 +100,5 @@ Desktop.ini
 .env
 
 media/
+
+migrations/

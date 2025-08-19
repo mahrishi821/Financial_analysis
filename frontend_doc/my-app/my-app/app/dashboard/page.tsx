@@ -15,7 +15,11 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  AlertCircle,
+  Search,
+  FileSpreadsheet,
+  TrendingUp
 } from "lucide-react";
 
 interface FileItem {
@@ -35,24 +39,111 @@ interface UserProfile {
   profilePicture?: string;
 }
 
+interface Company {
+  id: number;
+  company_name: string;
+}
+
+interface UploadedFinancialFile {
+  id: number;
+  filename: string;
+  fileType: 'balance_sheet' | 'profit_loss';
+  period: string;
+  company: string;
+  uploadDate: string;
+  size: string;
+}
+
+type ReportingPeriod = 'monthly' | 'quarterly' | 'ytd' | 'annual';
+type ActiveTab = "onboarding" | "upload" | "financial";
+
 const DocPlatform: React.FC = () => {
-  const [companies, setCompanies] = useState<{ id: number; company_name: string }[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const [selectedCompanyName, setSelectedCompanyName] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState<"onboarding" | "upload">("onboarding");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("onboarding");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const sideMenuRef = useRef<HTMLDivElement>(null);
 
-  // Mock user profile data - can be replaced with API call later
+  // Financial Data Ingestion States
+  const [reportingPeriod, setReportingPeriod] = useState<ReportingPeriod>('quarterly');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [balanceSheetFile, setBalanceSheetFile] = useState<File | null>(null);
+  const [profitLossFile, setProfitLossFile] = useState<File | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<{
+    balanceSheet?: string;
+    profitLoss?: string;
+  }>({});
+
+  // Keep demo user profile data (no API integration mentioned)
   const [userProfile] = useState<UserProfile>({
     name: "John",
     surname: "Doe",
     dateOfBirth: "1990-05-15",
     email: "john.doe@company.com",
     phone: "+1 (555) 123-4567",
-    profilePicture: "" // Empty for placeholder
+    profilePicture: ""
   });
 
+  // Keep demo uploaded files for document management (no API integration for fetching these)
+  const [uploadedFiles, setUploadedFiles] = useState<FileItem[]>([
+    {
+      id: 1,
+      filename: "Q3-2024-Financial-Reports.zip",
+      uploadDate: "2024-10-15",
+      uploader: "John Smith",
+      size: "2.4 MB",
+    },
+    {
+      id: 2,
+      filename: "Legal-Documents-Update.zip",
+      uploadDate: "2024-09-28",
+      uploader: "Sarah Johnson",
+      size: "1.8 MB",
+    },
+    {
+      id: 3,
+      filename: "Product-Roadmap-H2.zip",
+      uploadDate: "2024-09-15",
+      uploader: "Mike Chen",
+      size: "3.1 MB",
+    },
+  ]);
+
+  // Keep demo financial files (no API integration for fetching these)
+  const [uploadedFinancialFiles, setUploadedFinancialFiles] = useState<UploadedFinancialFile[]>([
+    {
+      id: 1,
+      filename: "Q3-2024-Balance-Sheet.xlsx",
+      fileType: 'balance_sheet',
+      period: 'quarterly',
+      company: 'Apple Inc.',
+      uploadDate: "2024-10-15",
+      size: "245 KB"
+    },
+    {
+      id: 2,
+      filename: "Q3-2024-Profit-Loss.xlsx",
+      fileType: 'profit_loss',
+      period: 'quarterly',
+      company: 'Apple Inc.',
+      uploadDate: "2024-10-15",
+      size: "198 KB"
+    },
+    {
+      id: 3,
+      filename: "Sep-2024-Balance-Sheet.xlsx",
+      fileType: 'balance_sheet',
+      period: 'monthly',
+      company: 'Microsoft Corporation',
+      uploadDate: "2024-10-05",
+      size: "187 KB"
+    }
+  ]);
+
+  // API integration for companies - remove mock data
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -104,29 +195,154 @@ const DocPlatform: React.FC = () => {
     status: "Active",
   });
 
-  const [uploadedFiles, setUploadedFiles] = useState<FileItem[]>([
-    {
-      id: 1,
-      filename: "Q3-2024-Financial-Reports.zip",
-      uploadDate: "2024-10-15",
-      uploader: "John Smith",
-      size: "2.4 MB",
-    },
-    {
-      id: 2,
-      filename: "Legal-Documents-Update.zip",
-      uploadDate: "2024-09-28",
-      uploader: "Sarah Johnson",
-      size: "1.8 MB",
-    },
-    {
-      id: 3,
-      filename: "Product-Roadmap-H2.zip",
-      uploadDate: "2024-09-15",
-      uploader: "Mike Chen",
-      size: "3.1 MB",
-    },
-  ]);
+  // Filter companies based on search term for financial tab
+  const filteredCompanies = companies.filter(company =>
+    company.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Handle company selection for financial tab
+  const handleFinancialCompanySelect = (company: Company) => {
+    setSelectedCompany(company.id.toString());
+    setSelectedCompanyName(company.company_name);
+    setSearchTerm(company.company_name);
+    setShowDropdown(false);
+  };
+
+  // Clear company selection for financial tab
+  const clearFinancialCompanySelection = () => {
+    setSelectedCompany("");
+    setSelectedCompanyName("");
+    setSearchTerm("");
+  };
+
+  // Get template names based on period
+  const getTemplateName = (type: 'balance_sheet' | 'profit_loss', period: ReportingPeriod) => {
+    const periodLabels = {
+      monthly: 'Monthly',
+      quarterly: 'Quarterly',
+      ytd: 'Year-to-Date',
+      annual: 'Annual'
+    };
+
+    const typeLabels = {
+      balance_sheet: 'Balance Sheet',
+      profit_loss: 'Profit & Loss'
+    };
+
+    return `${periodLabels[period]} ${typeLabels[type]} Template`;
+  };
+
+  // Handle template download
+  const handleTemplateDownload = (type: 'balance_sheet' | 'profit_loss') => {
+    const templateName = getTemplateName(type, reportingPeriod);
+    // In a real app, this would trigger an actual file download
+    alert(`Downloading: ${templateName}.xlsx`);
+    console.log(`Download template: ${type}_${reportingPeriod}_template.xlsx`);
+  };
+
+  // Validate financial file type
+  const validateFinancialFile = (file: File): string | null => {
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv', // .csv
+      'application/csv'
+    ];
+
+    const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      return 'Only Excel (.xlsx, .xls) and CSV files are allowed';
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      return 'File size must be less than 10MB';
+    }
+
+    return null;
+  };
+
+  // Handle financial file upload
+  const handleFinancialFileUpload = (file: File, type: 'balance_sheet' | 'profit_loss') => {
+    const error = validateFinancialFile(file);
+
+    if (error) {
+      setUploadErrors(prev => ({ ...prev, [type === 'balance_sheet' ? 'balanceSheet' : 'profitLoss']: error }));
+      return;
+    }
+
+    // Clear errors
+    setUploadErrors(prev => ({ ...prev, [type === 'balance_sheet' ? 'balanceSheet' : 'profitLoss']: undefined }));
+
+    // Set file
+    if (type === 'balance_sheet') {
+      setBalanceSheetFile(file);
+    } else {
+      setProfitLossFile(file);
+    }
+  };
+
+  // Submit financial files
+  const handleSubmitFinancialFiles = async () => {
+    if (!selectedCompany) {
+      alert('Please select a company first');
+      return;
+    }
+
+    if (!balanceSheetFile && !profitLossFile) {
+      alert('Please upload at least one file');
+      return;
+    }
+
+    try {
+      // In a real app, this would make API calls to upload files
+      console.log('Submitting financial files:', {
+        company_id: selectedCompany,
+        period: reportingPeriod,
+        balance_sheet: balanceSheetFile?.name,
+        profit_loss: profitLossFile?.name
+      });
+
+      // Mock successful upload
+      const selectedCompanyData = companies.find(c => c.id.toString() === selectedCompany);
+
+      if (balanceSheetFile) {
+        const newFile: UploadedFinancialFile = {
+          id: Date.now(),
+          filename: balanceSheetFile.name,
+          fileType: 'balance_sheet',
+          period: reportingPeriod,
+          company: selectedCompanyData?.company_name || '',
+          uploadDate: new Date().toISOString().split('T')[0],
+          size: `${Math.round(balanceSheetFile.size / 1024)} KB`
+        };
+        setUploadedFinancialFiles(prev => [newFile, ...prev]);
+      }
+
+      if (profitLossFile) {
+        const newFile: UploadedFinancialFile = {
+          id: Date.now() + 1,
+          filename: profitLossFile.name,
+          fileType: 'profit_loss',
+          period: reportingPeriod,
+          company: selectedCompanyData?.company_name || '',
+          uploadDate: new Date().toISOString().split('T')[0],
+          size: `${Math.round(profitLossFile.size / 1024)} KB`
+        };
+        setUploadedFinancialFiles(prev => [newFile, ...prev]);
+      }
+
+      // Reset form
+      setBalanceSheetFile(null);
+      setProfitLossFile(null);
+      alert('Financial files uploaded successfully!');
+
+    } catch (error) {
+      console.error("Error uploading financial files:", error);
+      alert("Error uploading financial files.");
+    }
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -137,6 +353,7 @@ const DocPlatform: React.FC = () => {
     });
   };
 
+  // API integration for company onboarding - keep as is
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -180,12 +397,13 @@ const DocPlatform: React.FC = () => {
     setSelectedFile(file);
   };
 
+  // API integration for ZIP file upload - keep as is
   const handleUploadClick = async () => {
     if (!selectedFile) {
       alert("Please choose a file first");
       return;
     }
-    if (!selectedCompany) {
+    if (!selectedCompany && activeTab === "upload") {
       alert("Please select a company before uploading");
       return;
     }
@@ -215,6 +433,7 @@ const DocPlatform: React.FC = () => {
     }
   };
 
+  // API integration for file upload - keep as is
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (!file) {
@@ -385,12 +604,23 @@ const DocPlatform: React.FC = () => {
               >
                 Document Management
               </button>
+              <button
+                onClick={() => setActiveTab("financial")}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "financial"
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Financial Data Ingestion
+              </button>
             </nav>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Company Onboarding Tab */}
         {activeTab === "onboarding" && (
           <div className="max-w-4xl mx-auto">
             <div className="mb-8">
@@ -611,6 +841,7 @@ const DocPlatform: React.FC = () => {
           </div>
         )}
 
+        {/* Document Management Tab */}
         {activeTab === "upload" && (
           <div className="max-w-6xl mx-auto">
             {/* Upload Header */}
@@ -727,6 +958,353 @@ const DocPlatform: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Financial Data Ingestion Tab */}
+        {activeTab === "financial" && (
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+                <TrendingUp className="w-8 h-8 mr-3 text-blue-600" />
+                Financial Data Ingestion
+              </h2>
+              <p className="text-gray-600">
+                Upload company financial statements for Balance Sheet and Profit & Loss reporting
+              </p>
+            </div>
+
+            {/* Step 1: Company Selection */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Building className="w-5 h-5 mr-2 text-blue-600" />
+                  Step 1: Select Company
+                </h3>
+              </div>
+              <div className="p-6">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="flex items-center">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setShowDropdown(true);
+                        }}
+                        onFocus={() => setShowDropdown(true)}
+                        className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Search for a company..."
+                      />
+                      {selectedCompany && (
+                        <button
+                          onClick={clearFinancialCompanySelection}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Dropdown */}
+                    {showDropdown && searchTerm && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                        {filteredCompanies.length > 0 ? (
+                          filteredCompanies.map((company) => (
+                            <button
+                              key={company.id}
+                              onClick={() => handleFinancialCompanySelect(company)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{company.company_name}</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500">No companies found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedCompany && (
+                    <div className="mt-3 flex items-center text-green-600">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <span className="text-sm">Selected: {selectedCompanyName}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: Reporting Period */}
+            {selectedCompany && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-blue-600" />
+                    Step 2: Select Reporting Period
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {([
+                      { value: 'monthly', label: 'Monthly' },
+                      { value: 'quarterly', label: 'Quarterly' },
+                      { value: 'ytd', label: 'Year-to-Date (YTD)' },
+                      { value: 'annual', label: 'Annual (Full Year)' }
+                    ] as const).map((period) => (
+                      <label
+                        key={period.value}
+                        className={`cursor-pointer border-2 rounded-lg p-4 text-center transition-all ${
+                          reportingPeriod === period.value
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="reportingPeriod"
+                          value={period.value}
+                          checked={reportingPeriod === period.value}
+                          onChange={(e) => setReportingPeriod(e.target.value as ReportingPeriod)}
+                          className="sr-only"
+                        />
+                        <div className="font-medium">{period.label}</div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Template Download */}
+            {selectedCompany && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Download className="w-5 h-5 mr-2 text-blue-600" />
+                    Step 3: Download Templates
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Download the templates, fill them with data, and upload them back
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Balance Sheet Template */}
+                    <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <FileSpreadsheet className="w-8 h-8 text-green-600 mr-3" />
+                          <div>
+                            <h4 className="font-semibold text-gray-900">Balance Sheet</h4>
+                            <p className="text-sm text-gray-600">
+                              {getTemplateName('balance_sheet', reportingPeriod)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleTemplateDownload('balance_sheet')}
+                        className="w-full px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Template
+                      </button>
+                    </div>
+
+                    {/* Profit & Loss Template */}
+                    <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <FileSpreadsheet className="w-8 h-8 text-purple-600 mr-3" />
+                          <div>
+                            <h4 className="font-semibold text-gray-900">Profit & Loss</h4>
+                            <p className="text-sm text-gray-600">
+                              {getTemplateName('profit_loss', reportingPeriod)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleTemplateDownload('profit_loss')}
+                        className="w-full px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Template
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: File Upload */}
+            {selectedCompany && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Upload className="w-5 h-5 mr-2 text-blue-600" />
+                    Step 4: Upload Completed Files
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Upload your completed Balance Sheet and/or Profit & Loss files
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Balance Sheet Upload */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                      <div className="text-center">
+                        <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">Balance Sheet</h4>
+
+                        {balanceSheetFile ? (
+                          <div className="text-sm text-green-600 mb-4">
+                            <CheckCircle className="w-4 h-4 inline mr-1" />
+                            {balanceSheetFile.name}
+                          </div>
+                        ) : (
+                          <p className="text-gray-600 mb-4">Upload your completed Balance Sheet</p>
+                        )}
+
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls,.csv"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFinancialFileUpload(file, 'balance_sheet');
+                          }}
+                          className="hidden"
+                          id="balance-sheet-upload"
+                        />
+                        <label
+                          htmlFor="balance-sheet-upload"
+                          className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {balanceSheetFile ? 'Replace File' : 'Choose File'}
+                        </label>
+
+                        {uploadErrors.balanceSheet && (
+                          <div className="mt-2 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            {uploadErrors.balanceSheet}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Profit & Loss Upload */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                      <div className="text-center">
+                        <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">Profit & Loss</h4>
+
+                        {profitLossFile ? (
+                          <div className="text-sm text-green-600 mb-4">
+                            <CheckCircle className="w-4 h-4 inline mr-1" />
+                            {profitLossFile.name}
+                          </div>
+                        ) : (
+                          <p className="text-gray-600 mb-4">Upload your completed Profit & Loss</p>
+                        )}
+
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls,.csv"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFinancialFileUpload(file, 'profit_loss');
+                          }}
+                          className="hidden"
+                          id="profit-loss-upload"
+                        />
+                        <label
+                          htmlFor="profit-loss-upload"
+                          className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {profitLossFile ? 'Replace File' : 'Choose File'}
+                        </label>
+
+                        {uploadErrors.profitLoss && (
+                          <div className="mt-2 text-sm text-red-600 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            {uploadErrors.profitLoss}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 text-xs text-gray-500">
+                    <p>Supported formats: Excel (.xlsx, .xls) and CSV files</p>
+                    <p>Maximum file size: 10MB per file</p>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={handleSubmitFinancialFiles}
+                      disabled={!selectedCompany || (!balanceSheetFile && !profitLossFile)}
+                      className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+                    >
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      Submit Files
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Uploaded Financial Files History */}
+            {uploadedFinancialFiles.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                    Previously Uploaded Financial Files
+                  </h3>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {uploadedFinancialFiles.map((file) => (
+                    <div key={file.id} className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center space-x-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          file.fileType === 'balance_sheet' ? 'bg-green-100' : 'bg-purple-100'
+                        }`}>
+                          <FileSpreadsheet className={`w-5 h-5 ${
+                            file.fileType === 'balance_sheet' ? 'text-green-600' : 'text-purple-600'
+                          }`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{file.filename}</h4>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <span className="capitalize">{file.fileType.replace('_', ' ')}</span>
+                            <span className="capitalize">{file.period}</span>
+                            <span>{file.company}</span>
+                            <span>{file.uploadDate}</span>
+                            <span>{file.size}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
