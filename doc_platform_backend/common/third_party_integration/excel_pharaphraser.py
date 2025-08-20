@@ -1,62 +1,85 @@
-# from typing import Dict
-# import pandas as pd
-# import textwrap
-# import openpyxl
-#
-#
+import pandas as pd
+import json
+from openpyxl import load_workbook
+from PIL import Image
+import fitz  # PyMuPDF
+import subprocess
+import io
+import tempfile
+import os
+
+
 class ExcelDataProcessor:
-    pass
-#     def __init__(self):
-#         # Optional: Load a paraphrasing model
-#         self.paraphraser = pipeline("text2text-generation", model="t5-small")
-#
-#     def load_excel(self, file_path_or_bytes, sheet_name=0) -> pd.DataFrame:
-#         """
-#         Loads an Excel file into a DataFrame.
-#         Accepts either a file path or byte stream.
-#         """
-#         return pd.read_excel(file_path_or_bytes, sheet_name=sheet_name, engine="openpyxl")
-#
-#     def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
-#         """
-#         Basic cleaning: remove empty rows, strip strings, and fix column names.
-#         """
-#         df = df.dropna(how="all")
-#         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-#         for col in df.select_dtypes(include="object"):
-#             df[col] = df[col].str.strip()
-#         return df
-#
-#     def paraphrase_column(self, df: pd.DataFrame, column_name: str, chunk_size=400) -> pd.DataFrame:
-#         """
-#         Paraphrases the text in a specific column.
-#         """
-#         def paraphrase(text: str):
-#             if not isinstance(text, str) or not text.strip():
-#                 return text
-#             chunks = textwrap.wrap(text, width=chunk_size)
-#             result = []
-#             for chunk in chunks:
-#                 prompt = f"paraphrase: {chunk} </s>"
-#                 out = self.paraphraser(prompt, max_new_tokens=256, do_sample=True, top_k=120, top_p=0.95, num_return_sequences=1)
-#                 result.append(out[0]["generated_text"])
-#             return " ".join(result)
-#
-#         df[column_name + "_paraphrased"] = df[column_name].apply(paraphrase)
-#         return df
-#
-#     def extract_metadata(self, file_path_or_bytes) -> Dict[str, str]:
-#         """
-#         Extracts metadata from the Excel file (limited support via openpyxl).
-#         """
-#         wb = openpyxl.load_workbook(file_path_or_bytes, read_only=True)
-#         props = wb.properties
-#
-#         return {
-#             "title": props.title,
-#             "author": props.creator,
-#             "created": str(props.created),
-#             "modified": str(props.modified),
-#             "keywords": props.keywords,
-#             "description": props.description
-#         }
+    def extract_text_from_excel(self, file_path: str) -> str:
+        """
+        Extract maximum data from Excel:
+        - All sheet data as text
+        - Charts count per sheet
+        - OCR text from embedded images using ocrmypdf
+        """
+
+        result = {}
+
+        # Step 1: Extract all sheet data with pandas
+        try:
+            xls = pd.read_excel(file_path, sheet_name=None)
+            all_sheets = {}
+            for sheet_name, df in xls.items():
+                df = df.astype(str)
+                all_sheets[sheet_name] = df.to_dict(orient="records")
+            result["data"] = all_sheets
+        except Exception as e:
+            result["data_error"] = f"Failed to extract sheet data: {str(e)}"
+
+        # Step 2: Detect charts & images
+        try:
+            wb = load_workbook(file_path)
+            charts_info = {sheet.title: len(sheet._charts) for sheet in wb.worksheets}
+            result["charts"] = charts_info
+
+            ocr_results = {}
+            for sheet in wb.worksheets:
+                extracted_texts = []
+                for img in getattr(sheet, "_images", []):
+                    try:
+                        # Convert Excel image → PIL Image
+                        img_bytes = img._data()
+                        image = Image.open(io.BytesIO(img_bytes))
+
+                        # Save image → temporary PDF
+                        with tempfile.TemporaryDirectory() as tmp_dir:
+                            img_path = os.path.join(tmp_dir, "img.png")
+                            pdf_path = os.path.join(tmp_dir, "img.pdf")
+                            ocr_pdf_path = os.path.join(tmp_dir, "img_ocr.pdf")
+
+                            image.save(img_path)
+
+                            # Convert image to PDF
+                            image.convert("RGB").save(pdf_path)
+
+                            # Run OCRmyPDF
+                            subprocess.run(
+                                ["ocrmypdf", "--force-ocr", pdf_path, ocr_pdf_path],
+                                check=True, capture_output=True
+                            )
+
+                            # Extract OCR text from processed PDF
+                            doc = fitz.open(ocr_pdf_path)
+                            ocr_text = "\n".join([page.get_text().strip() for page in doc])
+                            doc.close()
+
+                            if ocr_text.strip():
+                                extracted_texts.append(ocr_text.strip())
+
+                    except Exception as e:
+                        extracted_texts.append(f"[OCR Error: {str(e)}]")
+
+                ocr_results[sheet.title] = extracted_texts
+
+            result["ocr_from_images"] = ocr_results
+
+        except Exception as e:
+            result["meta_error"] = f"Failed to detect charts/images: {str(e)}"
+
+        # Step 3: Return JSON string (safe for DB)
+        return json.dumps(result, indent=2, ensure_ascii=False)

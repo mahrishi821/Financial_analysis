@@ -1,0 +1,7 @@
+from django.urls import path
+from .views import FileUploadView, GenerateReportView
+
+urlpatterns = [
+    path("upload/", FileUploadView.as_view(), name="file-upload"),
+    path("report/<int:file_id>/", GenerateReportView.as_view(), name="generate-report"),
+]

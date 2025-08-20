@@ -32,8 +32,10 @@ class Paraphrasepdf:
         return page_num, ocr_text
 
     def extract_text_from_pdf(self, file_bytes) -> str:
+        print(f"inside the extract_text_from_pdf")
         text_results = {}
         doc = fitz.open(stream=file_bytes, filetype="pdf")
+        print(f"doc={doc}")
 
         # Create one temp directory for all OCR files
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Report - {{ file_name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #2c3e50; }
+        .meta { font-size: 14px; color: #555; }
+        .summary { margin-top: 20px; font-size: 16px; line-height: 1.5; }
+        .raw { margin-top: 40px; font-size: 13px; color: #444; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Report for {{ file_name }}</h1>
+    <div class="meta">
+        <p><strong>File Type:</strong> {{ file_type }}</p>
+    </div>
+
+    <div class="summary">
+        {{ summary|safe }}
+    </div>
+
+    <hr>
+    <div class="raw">
+        <h3>Extracted Raw Content</h3>
+        {{ raw_text }}
+    </div>
+</body>
+</html>
