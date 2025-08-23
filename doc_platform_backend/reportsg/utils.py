@@ -53,7 +53,13 @@ def is_financial_text(text: str) -> bool:
     ]
 
     text_lower = text.lower()
-    return any(kw in text_lower for kw in financial_keywords)
+    for kw in financial_keywords:
+        if kw in text_lower:
+            print(f"✅ Found financial keyword: {kw}")  # Debug log
+            return True, kw   # Return both True and the matched keyword
+    return False, None
+
+    # return any(kw in text_lower for kw in financial_keywords)
 
 
 def extract_text_from_file(file_path,file_bytes):
@@ -62,19 +68,17 @@ def extract_text_from_file(file_path,file_bytes):
     if ext == ".pdf":
         pdf = Paraphrasepdf()
         text=pdf.extract_text_from_pdf(file_bytes)
-        print(f"Extracted text from pdf {text}")
         return text, "pdf"
 
     elif ext in [".xls", ".xlsx"]:
         ex = ExcelDataProcessor()
         text = ex.extract_text_from_excel(file_path)
-        print(f"Extracted text from excel ::{text}")
         return text, "excel"
 
     elif ext in [".doc", ".docx"]:
         doc = DocumentParaphraser()
         text = doc.extract_text_from_docx(file_bytes)
-        return text, "docx",""
+        return text, "docx"
 
     else:
         return "", "unknown"
