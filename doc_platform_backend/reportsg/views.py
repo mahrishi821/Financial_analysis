@@ -13,6 +13,20 @@ from .models import UserFile
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .tasks import preprocess_file_task
+# app/views.py
+from rest_framework.generics import ListAPIView
+from .models import UserFile
+from .serializers import UserFileSerializer
+from rest_framework.generics import ListAPIView
+from .models import UserFile
+from .serializers import ReportSerializer
+from rest_framework.permissions import IsAuthenticated
+
+class UserFileListView(ListAPIView):
+    queryset = UserFile.objects.all().order_by('-created_at')  # latest first
+    serializer_class = UserFileSerializer
+    permission_classes = [IsAuthenticated]  # optional
+
 class FileUploadView(APIView):
     def post(self, request):
         uploaded_file = request.FILES.get("file")
@@ -49,19 +63,26 @@ class FileUploadView(APIView):
         except Exception as e:
             return JSONResponseSender.send_error("500", str(e), str(e))
 
-# app/views.py
-class PreprocessFileView(APIView):
-    def post(self, request, file_id):
-        try:
-            return JSONResponseSender.send_success(preprocess_file_task(file_id))
-        except Exception as e:
-            return JSONResponseSender.send_error("500", str(e), str(e))
+class GeneratedReportListView(ListAPIView):
+    serializer_class = ReportSerializer
 
+    def get_queryset(self):
+        # Only list files which are processed and have PDF generated
+        return UserFile.objects.filter(status="done").order_by('-created_at')
 
-
-
-class FileStatusView(RetrieveAPIView):
-    queryset = UserFile.objects.all()
-    serializer_class = UserFileSerializer
+# # app/views.py
+# class PreprocessFileView(APIView):
+#     def post(self, request, file_id):
+#         try:
+#             return JSONResponseSender.send_success(preprocess_file_task(file_id))
+#         except Exception as e:
+#             return JSONResponseSender.send_error("500", str(e), str(e))
+#
+#
+#
+#
+# class FileStatusView(RetrieveAPIView):
+#     queryset = UserFile.objects.all()
+#     serializer_class = UserFileSerializer
 
 
