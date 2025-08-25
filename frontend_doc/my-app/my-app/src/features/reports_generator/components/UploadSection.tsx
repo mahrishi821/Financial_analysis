@@ -2,7 +2,7 @@
 import { Upload } from "lucide-react";
 
 export default function UploadSection({ onFileUpload, error }: {
-  onFileUpload: (files: FileList | null) => void;
+  onFileUpload: (files: FileList | null) => void | Promise<void>;
   error: string;
 }) {
   return (
