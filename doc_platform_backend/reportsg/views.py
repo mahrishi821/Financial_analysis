@@ -16,9 +16,9 @@ from .tasks import preprocess_file_task
 # app/views.py
 from rest_framework.generics import ListAPIView
 from .models import UserFile
-from .serializers import UserFileSerializer
+from .serializers import UserFileSerializer, GeneratedReportsSerializer
 from rest_framework.generics import ListAPIView
-from .models import UserFile
+from .models import UserFile, GeneratedReports
 from .serializers import ReportSerializer
 from rest_framework.permissions import IsAuthenticated
 
@@ -53,9 +53,9 @@ class FileUploadView(APIView):
             print(f"response={response}")
             obj.refresh_from_db()
 
-            if 'pdf_link' in response:
+            if "Report generated Successfully" in response:
                 return JSONResponseSender.send_success(
-                {"file_id": obj.id, "status": obj.status, "valid": obj.is_valid, "pdf_link": response['pdf_link']},
+                {"file_id": obj.id, "status": obj.status, "valid": obj.is_valid, "message":"Report generated Successfully"},
             )
             else:
                 return JSONResponseSender.send_error("400",response.get("error", "Unknown error"),response.get("error", "Unknown error"))
@@ -63,12 +63,12 @@ class FileUploadView(APIView):
         except Exception as e:
             return JSONResponseSender.send_error("500", str(e), str(e))
 
-class GeneratedReportListView(ListAPIView):
-    serializer_class = ReportSerializer
-
-    def get_queryset(self):
-        # Only list files which are processed and have PDF generated
-        return UserFile.objects.filter(status="done").order_by('-created_at')
+# class GeneratedReportListView(ListAPIView):
+#     serializer_class = ReportSerializer
+#
+#     def get_queryset(self):
+#         # Only list files which are processed and have PDF generated
+#         return UserFile.objects.filter(status="done").order_by('-created_at')
 
 # # app/views.py
 # class PreprocessFileView(APIView):
@@ -86,3 +86,6 @@ class GeneratedReportListView(ListAPIView):
 #     serializer_class = UserFileSerializer
 
 
+class GeneratedReportListView(ListAPIView):
+    queryset = GeneratedReports.objects.all().order_by("-created_at")
+    serializer_class = GeneratedReportsSerializer

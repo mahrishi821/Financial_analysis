@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import json
 from .agent4 import run_agent4
-from .models import Visualization
+from .models import Visualization,GeneratedReports
 from .agnet5 import generate_pdf_report
 from pathlib import Path
 
@@ -90,7 +90,11 @@ def preprocess_file_task(file_id):
 
         output_path = output_dir / f"report_{user_file.id}.pdf"
         pdf=generate_pdf_report(summary,insights,charts,output_path=str(output_path))
-        return {"pdf_link":pdf}
+        GeneratedReports.objects.create(
+            raw_file=user_file,
+            report_file=f"reports/report_{user_file.id}.pdf"
+        )
+        return "Report generated Successfully"
 
     except Exception as e:
         user_file.status = "error"

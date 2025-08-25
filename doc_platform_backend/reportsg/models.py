@@ -49,3 +49,11 @@ class Visualization(models.Model):
 
     def __str__(self):
         return f"{self.chart_type}: {self.title}"
+
+class GeneratedReports(models.Model):
+    raw_file=models.ForeignKey(UserFile,on_delete=models.CASCADE,related_name='uploaded_file')
+    created_at=models.DateTimeField(auto_now_add=True)
+    report_file=models.FileField(upload_to="reports/",null=True,blank=True)
+
+    def __str__(self):
+        return f"report_file"

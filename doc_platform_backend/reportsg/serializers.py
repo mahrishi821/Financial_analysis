@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import UserFile, ExtractedData, GeneratedInsight
 from rest_framework import serializers
 from pathlib import Path
-from .models import UserFile, GeneratedInsight, Visualization
+from .models import UserFile, GeneratedInsight, Visualization, GeneratedReports
 class UserFileSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -51,3 +51,22 @@ class ReportSerializer(serializers.ModelSerializer):
     #     charts = Visualization.objects.filter(file=obj)
     #     return [chart.config for chart in charts]
     #
+class GeneratedReportsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneratedReports
+        fields = ['raw_file', 'report_file', 'created_at']
+        read_only_fields = ['created_at']
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+
+        if instance.report_file:
+            rep['raw_file'] = {
+                "id": instance.raw_file.id,
+                "file_name": instance.raw_file.file_name,
+                "created_at": instance.raw_file.created_at,
+            }
+
+        return rep
+
+
