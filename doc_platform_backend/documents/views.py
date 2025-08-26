@@ -4,17 +4,13 @@ from common.jsonResponse.response import JSONResponseSender
 from common.third_party_integration.pdf_paraphraser import Paraphrasepdf
 from common.third_party_integration.doc_paraphraser import DocumentParaphraser
 from common.third_party_integration.excel_pharaphraser import ExcelDataProcessor
-import os
-import zipfile
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status
-from django.conf import settings
-from django.core.files.base import ContentFile
-from .models import DocumentUpload, ExtractedDocument  # assume these exist
-from .serializers import DocumentUploadSerializer
-from companies.models import Company  # adjust import path
+from common.models import DocumentUpload, ExtractedDocument,Company
+from common.serializers import DocumentUploadSerializer
+
 
 
 

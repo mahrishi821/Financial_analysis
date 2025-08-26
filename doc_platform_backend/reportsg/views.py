@@ -1,28 +1,25 @@
-import tempfile, os
-from rest_framework.views import APIView
-from .utils import extract_text_from_file
-from rest_framework.views import APIView
+import os
+import tempfile
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from rest_framework.generics import RetrieveAPIView
-from .serializers import UserFileSerializer
-import os, tempfile
 from rest_framework.views import APIView
-from common.jsonResponse.response import JSONResponseSender
-from .models import UserFile
-from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
-from .tasks import preprocess_file_task
-from rest_framework.generics import ListAPIView
-from .models import UserFile
-from .serializers import UserFileSerializer, GeneratedReportsSerializer, AssetAnalysisSerializer
-from rest_framework.generics import ListAPIView
-from .models import UserFile, GeneratedReports , AssetAnalysis
-from .serializers import ReportSerializer
 from rest_framework.permissions import IsAuthenticated
+from common.jsonResponse.response import JSONResponseSender
+from common.models import UserFile, GeneratedReports, AssetAnalysis
+from common.serializers import (
+    UserFileSerializer,
+    GeneratedReportsSerializer,
+    AssetAnalysisSerializer,
+    ReportSerializer,
+)
+from .utils import extract_text_from_file
+from .tasks import preprocess_file_task
 from .AssetAnalysisAi import run_asset_analysis
+
 class UserFileListView(ListAPIView):
-    queryset = UserFile.objects.all().order_by('-created_at')  # latest first
+    queryset = UserFile.objects.all().order_by('-created_at')
     serializer_class = UserFileSerializer
     permission_classes = [IsAuthenticated]  # optional
 
@@ -73,9 +70,9 @@ class AssetAnalysisView(APIView):
             asset_query = serializer.validated_data["asset_query"]
             try:
                 result = run_asset_analysis(asset_query, work_dir=f"./coding/asset_analysis_{analysis.id}")
-                if result["report"]:
+                if result.get("report"):
                     return JSONResponseSender.send_success({"id": analysis.id,"asset_query": asset_query,"report": result["report"],"figures": result["figures"],"query_datetime": analysis.query_datetime})
                 else:
-                    return JSONResponseSender.send_error("400","report not found","report not found")
+                    return JSONResponseSender.send_error("400","report not found",result)
             except Exception as e:
                 return JSONResponseSender.send_error("500",str(e),str(e))

@@ -1,7 +1,6 @@
 from rest_framework import viewsets
-from .models import Company
-from .serializers import CompanySerializer
-from common.serializers import UserSignupSerializer, UserLoginSerializer
+from common.models import Company
+from common.serializers import UserSignupSerializer, UserLoginSerializer,CompanySerializer
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken

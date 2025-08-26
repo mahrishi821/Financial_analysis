@@ -6,5 +6,4 @@ urlpatterns = [
     path("upload/", FileUploadView.as_view(), name="file-upload"),
     path('files/', GeneratedReportListView.as_view(), name='userfile-list'),
     path("asset-analysis/", AssetAnalysisView.as_view(), name="asset-analysis"),
-    # path('report/',GeneratedReports.as_view(),name='generatereport')
 ]

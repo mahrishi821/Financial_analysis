@@ -5,7 +5,6 @@ from typing import Optional, Dict, Any, List
 import autogen
 import markdown
 
-#  LLM  configuration
 API_KEY = os.getenv("AUTOGEN_API_KEY", "YOUR_API_KEY")
 
 llm_config = {
@@ -287,25 +286,15 @@ def run_asset_analysis(asset_query: str, work_dir: Optional[str] = None) -> Dict
                 found_figures.append(os.path.join(work_dir, fname))
 
         result = {
-            "status": "success",
-            # "report": final_writer_content or "",
             "report": html_report,
             "figures": found_figures,
             "chat_results": chat_results,
-            "metadata": {
-                "asset_query": asset_query,
-                "generated_at": datetime.datetime.now().isoformat(),
-                "agents": ["Financial_assistant", "Researcher", "writer", "Critic", "Legal_Reviewer",
-                           "Text_lignment_reviewer", "Consistency_reviewer", "Completion_Reviewer", "Meta_Reviewer"]
-            }
-        }
+             }
 
-        # with_logger(f"Multi-agent run completed successfully for: {asset_query}")
         return result
 
-    except Exception as exc:
-        # logger.exception("Error while running asset analysis")
-        return {"status": "error", "message": "Exception while running asset analysis", "exception": str(exc)}
+    except Exception as e:
+        return {'error':str(e)}
 
 
 

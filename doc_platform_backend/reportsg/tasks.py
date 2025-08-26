@@ -1,12 +1,11 @@
 from celery import shared_task
-from .models import UserFile, ExtractedData,GeneratedInsight
+from common.models import UserFile, ExtractedData,GeneratedInsight,Visualization,GeneratedReports
 from .agent3 import run_agent3_pipeline
 from .utils import extract_text_from_file, is_financial_text
 import pandas as pd
 import numpy as np
 import json
 from .agent4 import run_agent4
-from .models import Visualization,GeneratedReports
 from .agnet5 import generate_pdf_report
 from pathlib import Path
 
