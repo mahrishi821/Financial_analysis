@@ -1,5 +1,5 @@
 from django.db import models
-
+import datetime
 class UserFile(models.Model):
     STATUS_CHOICES = [
         ("uploaded", "Uploaded"),
@@ -57,3 +57,14 @@ class GeneratedReports(models.Model):
 
     def __str__(self):
         return f"report_file"
+
+class AssetAnalysis(models.Model):
+
+    asset_query=models.CharField(max_length=500)
+    query_datetime=models.DateTimeField(default=datetime.datetime.now)
+
+    class Meta:
+        db_table='asset_analysis'
+    def __str__(self):
+
+        return f"{self.asset_query}"

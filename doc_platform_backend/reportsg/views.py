@@ -13,15 +13,14 @@ from .models import UserFile
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .tasks import preprocess_file_task
-# app/views.py
 from rest_framework.generics import ListAPIView
 from .models import UserFile
-from .serializers import UserFileSerializer, GeneratedReportsSerializer
+from .serializers import UserFileSerializer, GeneratedReportsSerializer, AssetAnalysisSerializer
 from rest_framework.generics import ListAPIView
-from .models import UserFile, GeneratedReports
+from .models import UserFile, GeneratedReports , AssetAnalysis
 from .serializers import ReportSerializer
 from rest_framework.permissions import IsAuthenticated
-
+from .AssetAnalysisAi import run_asset_analysis
 class UserFileListView(ListAPIView):
     queryset = UserFile.objects.all().order_by('-created_at')  # latest first
     serializer_class = UserFileSerializer
@@ -62,30 +61,21 @@ class FileUploadView(APIView):
 
         except Exception as e:
             return JSONResponseSender.send_error("500", str(e), str(e))
-
-# class GeneratedReportListView(ListAPIView):
-#     serializer_class = ReportSerializer
-#
-#     def get_queryset(self):
-#         # Only list files which are processed and have PDF generated
-#         return UserFile.objects.filter(status="done").order_by('-created_at')
-
-# # app/views.py
-# class PreprocessFileView(APIView):
-#     def post(self, request, file_id):
-#         try:
-#             return JSONResponseSender.send_success(preprocess_file_task(file_id))
-#         except Exception as e:
-#             return JSONResponseSender.send_error("500", str(e), str(e))
-#
-#
-#
-#
-# class FileStatusView(RetrieveAPIView):
-#     queryset = UserFile.objects.all()
-#     serializer_class = UserFileSerializer
-
-
 class GeneratedReportListView(ListAPIView):
     queryset = GeneratedReports.objects.all().order_by("-created_at")
     serializer_class = GeneratedReportsSerializer
+
+class AssetAnalysisView(APIView):
+    def post(self, request):
+        serializer = AssetAnalysisSerializer(data=request.data)
+        if serializer.is_valid():
+            analysis = serializer.save()
+            asset_query = serializer.validated_data["asset_query"]
+            try:
+                result = run_asset_analysis(asset_query, work_dir=f"./coding/asset_analysis_{analysis.id}")
+                if result["report"]:
+                    return JSONResponseSender.send_success({"id": analysis.id,"asset_query": asset_query,"report": result["report"],"figures": result["figures"],"query_datetime": analysis.query_datetime})
+                else:
+                    return JSONResponseSender.send_error("400","report not found","report not found")
+            except Exception as e:
+                return JSONResponseSender.send_error("500",str(e),str(e))

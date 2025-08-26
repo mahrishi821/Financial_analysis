@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import UserFile, ExtractedData, GeneratedInsight
 from rest_framework import serializers
 from pathlib import Path
-from .models import UserFile, GeneratedInsight, Visualization, GeneratedReports
+from .models import UserFile, GeneratedInsight, Visualization, GeneratedReports, AssetAnalysis
 class UserFileSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -70,3 +70,8 @@ class GeneratedReportsSerializer(serializers.ModelSerializer):
         return rep
 
 
+class AssetAnalysisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetAnalysis
+        fields = ["asset_query"]
+        read_only_fields = ["query_datetime"]
