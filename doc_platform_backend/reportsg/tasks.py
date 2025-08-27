@@ -68,7 +68,7 @@ def preprocess_file_task(file_id):
         generated_insight = GeneratedInsight.objects.create(file=user_file, summary=summary, insights=insights)
 
         # --- Agent 4 (NEW) ---
-        # charts=[]
+        charts=[]
         if tables:
             charts = run_agent4(tables)
             print(f"charts :: {charts}")

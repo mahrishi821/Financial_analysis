@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import (User, Company, DocumentUpload , ExtractedDocument, GeneratedReports, AssetAnalysis,UserFile, ExtractedData, GeneratedInsight)
+from .models import (User, Company, DocumentUpload , ExtractedDocument, GeneratedReports, AssetAnalysis,UserFile,
+
+                     ExtractedData, GeneratedInsight,ChatbotUpload,ChatbotSession)
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from pathlib import Path
@@ -140,3 +142,14 @@ class AssetAnalysisSerializer(serializers.ModelSerializer):
         model = AssetAnalysis
         fields = ["asset_query"]
         read_only_fields = ["query_datetime"]
+
+
+class ChatbotUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatbotUpload
+        fields = ["id", "file", "file_name", "file_type", "uploaded_at", "processed"]
+
+class ChatbotSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatbotSession
+        fields = ["id", "upload", "question", "answer", "created_at"]

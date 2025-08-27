@@ -3,11 +3,10 @@ import React, { useState } from "react";
 import UploadSection from "./components/UploadSection";
 import UploadedDocumentList from "./components/UploadedDocumentList";
 import GenerateReportButton from "./components/GenerateReportButton";
-import GeneratedReportsList from "./components/GeneratedReportsList";
 import InfoCard from "./components/InfoCard";
 import BackendReportsList from "./components/BackendReportsList";
 import { Upload, TrendingUp, Download } from "lucide-react";
-import { uploadReportFile } from "./services/uploadService";
+import { uploadReportFile, listReports } from "./services/uploadService";
 
 interface UploadedDocument {
   id: string;
@@ -19,19 +18,12 @@ interface UploadedDocument {
   fileRef?: File; // keep a reference to upload on Generate click
 }
 
-interface GeneratedReport {
-  id: string;
-  filename: string;
-  generatedDate: string;
-  size: string;
-  sourceDocument: string;
-}
-
 export default function FinancialReportGenerator() {
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDocument[]>([]);
-  const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>([]);
   const [uploadError, setUploadError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [reportsRefreshToken, setReportsRefreshToken] = useState(0);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // ✅ Handle file select (store only; do NOT call backend yet)
   const handleFileUpload = (files: FileList | null) => {
@@ -65,6 +57,8 @@ export default function FinancialReportGenerator() {
   };
 
   // ✅ Generate report: now triggers backend upload for selected file(s)
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
   const generateReport = async () => {
     if (uploadedDocs.length === 0) {
       setUploadError("Please upload at least one document to generate a report");
@@ -86,37 +80,37 @@ export default function FinancialReportGenerator() {
 
     if (!ok) {
       setUploadError(error || "Upload failed");
+      setToast({ message: error || "Upload failed", type: "error" });
       setUploadedDocs((prev) => prev.map((d) => (d.id === target.id ? { ...d, status: "error" } : d)));
       setIsGenerating(false);
       return;
     }
 
-    // mark as completed
-    setUploadedDocs((prev) => prev.map((d) => (d.id === target.id ? { ...d, status: "completed" } : d)));
+    // mark as completed and clear the uploaded item from the list
+    setUploadedDocs((prev) => prev.filter((d) => d.id !== target.id));
 
-    // optionally append to mock GeneratedReports if API returns a name
-    const maybeFilename = (data && (data.filename || data.file || data.report_filename)) as string | undefined;
-    if (maybeFilename) {
-      const newReport: GeneratedReport = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        filename: maybeFilename,
-        generatedDate: new Date().toISOString(),
-        size: (data && (data.size || data.file_size)) || "-",
-        sourceDocument: target.name,
-      };
-      setGeneratedReports((prev) => [newReport, ...prev]);
+    // Show success toast (use backend message if present)
+    const backendMsg = (data && (data.message || data.data?.message)) || "Report generated Successfully";
+    setToast({ message: backendMsg, type: "success" });
+
+    // Poll the reports endpoint until the new report appears (up to ~5s)
+    const fileId = (data && (data.data?.file_id || data.file_id)) as number | undefined;
+    let found = false;
+    for (let i = 0; i < 5; i++) {
+      await sleep(1000);
+      const rep = await listReports();
+      if (rep.ok && Array.isArray(rep.data) && fileId) {
+        if (rep.data.some((it) => it.raw_file?.id === fileId)) {
+          found = true;
+          break;
+        }
+      }
     }
+
+    // bump refresh token to reload reports list
+    setReportsRefreshToken((x) => x + 1);
 
     setIsGenerating(false);
-  };
-
-  // ✅ Download (redirect users to backend-completed reports section)
-  const downloadReport = (report: GeneratedReport) => {
-    const el = typeof document !== 'undefined' ? document.getElementById('backend-reports') : null;
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    alert('Please use the "Reports (completed)" section below to download the finalized file.');
   };
 
   return (
@@ -132,21 +126,14 @@ export default function FinancialReportGenerator() {
             <GenerateReportButton
               onClick={generateReport}
               isGenerating={isGenerating}
+              disabled={uploadedDocs.length === 0}
             />
           </div>
         </>
       )}
 
-      {/* Reports */}
-      {generatedReports.length > 0 && (
-        <GeneratedReportsList
-          reports={generatedReports}
-          onDownload={downloadReport}
-        />
-      )}
-
       {/* Completed Reports */}
-      <BackendReportsList />
+      <BackendReportsList refreshToken={reportsRefreshToken} />
 
       {/* Info Cards */}
       <div className="grid md:grid-cols-3 gap-6">
@@ -169,6 +156,15 @@ export default function FinancialReportGenerator() {
           color="border-green-200 bg-green-50"
         />
       </div>
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded shadow text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+          onAnimationEnd={() => undefined}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

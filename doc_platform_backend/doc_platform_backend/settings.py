@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'documents',
      'common',
      'reportsg',
+    'chatbot',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
 ]

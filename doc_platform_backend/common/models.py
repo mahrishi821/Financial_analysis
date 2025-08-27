@@ -243,3 +243,29 @@ class AssetAnalysis(models.Model):
     def __str__(self):
 
         return f"{self.asset_query}"
+
+class ChatbotUpload(models.Model):
+    # user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="chatbot_uploads")
+    file = models.FileField(upload_to="chatbot_docs/")
+    file_name = models.CharField(max_length=255)
+    file_type = models.CharField(max_length=50)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    processed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"ChatbotDoc: {self.file_name}"
+
+
+class ChatbotChunk(models.Model):
+    upload = models.ForeignKey(ChatbotUpload, on_delete=models.CASCADE, related_name="chunks",null=True)
+    chunk_text = models.TextField()
+    vector_id = models.CharField(max_length=255, null=True, blank=True)  # Pinecone ID
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ChatbotSession(models.Model):
+    # user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="chatbot_sessions")
+    upload = models.ForeignKey(ChatbotUpload, on_delete=models.CASCADE, related_name="sessions")
+    question = models.TextField()
+    answer = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)

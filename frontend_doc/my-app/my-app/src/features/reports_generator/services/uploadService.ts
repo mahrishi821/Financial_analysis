@@ -60,17 +60,17 @@ export async function uploadReportFile(file: File): Promise<UploadResult> {
   }
 }
 
-export type BackendFileItem = {
-  id: number;
-  file_name: string;
-  file_type: string;
-  status: string;
-  is_valid: boolean;
-  created_at: string; // ISO
-  file: string; // absolute URL on backend
+export type ReportListItem = {
+  raw_file: {
+    id: number;
+    file_name: string;
+    created_at: string; // ISO
+  };
+  report_file: string; // absolute URL to generated PDF
+  created_at: string; // ISO for report creation
 };
 
-export async function listUploadedFiles(): Promise<UploadResult & { data?: BackendFileItem[] }> {
+export async function listReports(): Promise<UploadResult & { data?: ReportListItem[] }> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/files/`, { method: "GET" });
     const contentType = res.headers.get("content-type") || "";
@@ -91,12 +91,12 @@ export async function listUploadedFiles(): Promise<UploadResult & { data?: Backe
     }
 
     if (!res.ok) {
-      const message = (payload && (payload.error || payload.detail)) || `List files failed with status ${res.status}`;
+      const message = (payload && (payload.error || payload.detail)) || `List reports failed with status ${res.status}`;
       return { ok: false, error: message };
     }
 
-    return { ok: true, data: payload as BackendFileItem[] };
+    return { ok: true, data: payload as ReportListItem[] };
   } catch (err: any) {
-    return { ok: false, error: err?.message || "Network error while listing files" };
+    return { ok: false, error: err?.message || "Network error while listing reports" };
   }
 }
