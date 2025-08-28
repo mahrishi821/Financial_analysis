@@ -147,7 +147,7 @@ class AssetAnalysisSerializer(serializers.ModelSerializer):
 class ChatbotUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatbotUpload
-        fields = ["id", "file", "file_name", "file_type", "uploaded_at", "processed"]
+        fields = ["id", "file", "file_name", "file_type", "uploaded_at", "processed","uploaded_by"]
 
 class ChatbotSessionSerializer(serializers.ModelSerializer):
     class Meta:

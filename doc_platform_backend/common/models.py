@@ -108,6 +108,7 @@ class Company(ModelManager):
     ]
 
     company_name = models.CharField(max_length=255, unique=True)
+    created_by = models.ForeignKey(User,on_delete=models.CASCADE,related_name='created_by',null=True)
     sector = models.CharField(max_length=50, choices=Sector.choices)
     sub_sector = models.CharField(max_length=50, choices=SubSector.choices, blank=True)
     country = models.CharField(max_length=100)
@@ -183,6 +184,7 @@ class UserFile(models.Model):
         ("error", "Error"),
         ("done", "Done"),
     ]
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE,null=True)
     file = models.FileField(upload_to="uploads/",null=True)
     file_type = models.CharField(max_length=255)
     file_name = models.CharField(max_length=255)
@@ -235,6 +237,7 @@ class GeneratedReports(models.Model):
 
 class AssetAnalysis(models.Model):
 
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="asset_analysis",null=True)
     asset_query=models.CharField(max_length=500)
     query_datetime=models.DateTimeField(default=timezone.now)
 
@@ -245,11 +248,11 @@ class AssetAnalysis(models.Model):
         return f"{self.asset_query}"
 
 class ChatbotUpload(models.Model):
-    # user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="chatbot_uploads")
     file = models.FileField(upload_to="chatbot_docs/")
     file_name = models.CharField(max_length=255)
     file_type = models.CharField(max_length=50)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User,on_delete=models.CASCADE,related_name="uploaded_user",null=True)
     processed = models.BooleanField(default=False)
 
     def __str__(self):
@@ -264,7 +267,7 @@ class ChatbotChunk(models.Model):
 
 
 class ChatbotSession(models.Model):
-    # user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="chatbot_sessions")
+
     upload = models.ForeignKey(ChatbotUpload, on_delete=models.CASCADE, related_name="sessions")
     question = models.TextField()
     answer = models.TextField()
