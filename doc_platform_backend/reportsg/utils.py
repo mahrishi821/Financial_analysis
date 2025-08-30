@@ -1,10 +1,11 @@
 from common.third_party_integration.doc_paraphraser import DocumentParaphraser
 from common.third_party_integration.pdf_paraphraser import Paraphrasepdf
 from common.third_party_integration.excel_pharaphraser import ExcelDataProcessor
+from common.utils.finance_classifire import FinancialTextClassifier
 import os
 import pandas as pd
 import re
-
+fin_classifier = FinancialTextClassifier()
 def is_financial_text(text: str) -> bool:
     financial_keywords = [
         # Core financial statements
@@ -54,12 +55,12 @@ def is_financial_text(text: str) -> bool:
 
     text_lower = text.lower()
     for kw in financial_keywords:
-        if kw in text_lower:
-            print(f"✅ Found financial keyword: {kw}")  # Debug log
-            return True, kw   # Return both True and the matched keyword
-    return False, None
+        print(f"fin_classifier.is_financial(text_lower) :: {fin_classifier.is_financial(text_lower)}")
+        return (fin_classifier.is_financial(text_lower))
 
-    # return any(kw in text_lower for kw in financial_keywords)
+    return False
+
+
 
 
 def extract_text_from_file(file_path,file_bytes):

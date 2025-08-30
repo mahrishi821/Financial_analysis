@@ -1,9 +1,15 @@
 from django.urls import path
-# from .views import FileUploadView, GenerateReportView
-from .views import FileUploadView, GeneratedReportListView, GeneratedReports, AssetAnalysisView
+from rest_framework.routers import DefaultRouter
+from .views import FileUploadView, GeneratedReportViewSet,AssetAnalysisViewSet
+
+router = DefaultRouter()
+router.register(r'reports', GeneratedReportViewSet, basename='reports')
+router.register(r'assets', AssetAnalysisViewSet, basename='assets')
+
+# api/assets/analysiscount/   assets count endpoint
 
 urlpatterns = [
     path("upload/", FileUploadView.as_view(), name="file-upload"),
-    path('files/', GeneratedReportListView.as_view(), name='userfile-list'),
-    path("asset-analysis/", AssetAnalysisView.as_view(), name="asset-analysis"),
 ]
+
+urlpatterns+=router.urls

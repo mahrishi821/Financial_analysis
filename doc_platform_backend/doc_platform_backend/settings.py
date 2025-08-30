@@ -64,22 +64,23 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',     # authenticated
         'rest_framework.throttling.ScopedRateThrottle',   # per-view scopes if you want
     ),
+    "DEFAULT_PERMISSION_CLASSES": (
+            "rest_framework.permissions.IsAuthenticated",  # applied it for the compulsory of sending token in the api request
+        ),
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/min',        # tune these for your system
+        'anon': '20/min',
         'user': '100/min',
-        # example per-view scopes:
         'signup': '5/min',
         'login':  '10/min',
     },
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,           # rotate on refresh
     "BLACKLIST_AFTER_ROTATION": True,         # requires token_blacklist app
     "UPDATE_LAST_LOGIN": True,                # optional: updates last_login
-    # If your USERNAME_FIELD is 'email', SimpleJWT uses it automatically.
 }
 
 

@@ -30,7 +30,7 @@ class ChatbotUploadView(APIView):
             return JSONResponseSender.send_error("400", "Unsupported file type", "support only excel, docs and pdf")
         try:
             upload = ChatbotUpload.objects.create(
-                # user=request.user,
+                uploaded_by=request.user,
                 file=uploaded_file,
                 file_name=uploaded_file.name,
                 file_type=uploaded_file.name.split(".")[-1]
@@ -38,7 +38,8 @@ class ChatbotUploadView(APIView):
 
             return JSONResponseSender.send_success( {
                 "message": "File uploaded successfully",
-                "upload_id": upload.id
+                "upload_id": upload.id,
+                "uploaded_by": upload.uploaded_by.name,
             })
         except Exception as e:
             return JSONResponseSender.send_error("500", str(e), str(e))
@@ -52,8 +53,7 @@ class ProcessChatbotUploadView(APIView):
 
         # Extract text
         try:
-            # upload = get_object_or_404(ChatbotUpload, id=pk, user=request.user)
-            upload = get_object_or_404(ChatbotUpload, id=pk)
+            upload = get_object_or_404(ChatbotUpload, id=pk, uploaded_by=request.user)
             text, file_type = extractor.extract(upload.file.path, upload.file.read())
 
             if not text:
@@ -80,11 +80,8 @@ class ChatbotQueryView(APIView):
     Query chatbot: retrieve chunks from Pinecone and generate answer using OpenRouter LLM.
     """
     def post(self, request, pk):
-        # upload = get_object_or_404(ChatbotUpload, id=pk, user=request.user)
-        upload = get_object_or_404(ChatbotUpload, id=pk)
+        upload = get_object_or_404(ChatbotUpload, id=pk, uploaded_by=request.user)
         question = request.data.get("question")
-
-        print(f"Question :: {question}")
 
         try:
             if not question:
@@ -119,9 +116,20 @@ class ChatbotHistoryView(APIView):
     """
     def get(self, request, pk):
         try:
-            upload = get_object_or_404(ChatbotUpload, id=pk)
-            # upload = get_object_or_404(ChatbotUpload, id=pk, user=request.user)
+            upload = get_object_or_404(ChatbotUpload, id=pk, uploaded_by=request.user)
             sessions = ChatbotSession.objects.filter(upload=upload).order_by("-created_at")
             return JSONResponseSender.send_success(ChatbotSessionSerializer(sessions, many=True).data)
+        except Exception as e:
+            return JSONResponseSender.send_error("500", str(e), str(e))
+
+
+class ChatbotUserSessionView(APIView):
+    """
+    Retrieve number of chat session for given user
+    """
+    def get(self, request):
+        try:
+            sessions_count= ChatbotSession.objects.filter(upload__uploaded_by=request.user).count()
+            return JSONResponseSender.send_success({"sessions_count": sessions_count})
         except Exception as e:
             return JSONResponseSender.send_error("500", str(e), str(e))

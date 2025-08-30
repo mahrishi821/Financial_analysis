@@ -8,6 +8,7 @@ import json
 from .agent4 import run_agent4
 from .agnet5 import generate_pdf_report
 from pathlib import Path
+from django.core.files import File
 
 
 def dataframe_to_json_serializable(df: pd.DataFrame):
@@ -43,13 +44,13 @@ def preprocess_file_task(file_id):
             file_bytes = f.read()
         text, file_type = extract_text_from_file(file_path, file_bytes)
 
-        if not is_financial_text(text):
+        if  not is_financial_text(text) :
+
             user_file.is_valid = False
             user_file.status="declined"
             user_file.validation_reason = "Document not financial"
             user_file.save()
-            return {"status": "invalid", "reason": "Not financial"}
-
+            return "Not financial"
         sections = {"narrative": text}
 
         extracted = ExtractedData.objects.create(
@@ -85,14 +86,15 @@ def preprocess_file_task(file_id):
         user_file.save()
 
         output_dir = Path("media/reports")
-        output_dir.mkdir(parents=True, exist_ok=True)  # ✅ creates folder if not exists
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         output_path = output_dir / f"report_{user_file.id}.pdf"
         pdf=generate_pdf_report(summary,insights,charts,output_path=str(output_path))
         GeneratedReports.objects.create(
             raw_file=user_file,
-            report_file=f"reports/report_{user_file.id}.pdf"
+            report_file=f"reports/report_{user_file.file_name}"
         )
+
         return "Report generated Successfully"
 
     except Exception as e:
