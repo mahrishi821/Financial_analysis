@@ -1,5 +1,4 @@
 from urllib import request
-
 from rest_framework import viewsets
 from common.models import Company
 from common.serializers import UserSignupSerializer, UserLoginSerializer,CompanySerializer

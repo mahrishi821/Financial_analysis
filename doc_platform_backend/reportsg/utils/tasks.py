@@ -1,12 +1,12 @@
 from celery import shared_task
 from common.models import UserFile, ExtractedData,GeneratedInsight,Visualization,GeneratedReports
-from .agent3 import run_agent3_pipeline
-from .utils import extract_text_from_file, is_financial_text
+from .document_processor import extract_text_from_file, is_financial_text
 import pandas as pd
 import numpy as np
 import json
-from .agent4 import run_agent4
-from .agnet5 import generate_pdf_report
+from ..agents.agent2 import ChartGeneratorAgent
+from ..agents.agnet3 import ReportGeneratorAgent
+from ..agents.agent1 import FinancialDocumentInterpreter
 from pathlib import Path
 from django.core.files import File
 
@@ -64,14 +64,14 @@ def preprocess_file_task(file_id):
         user_file.validation_reason = "Financial document detected"
         user_file.save()
 
-        summary, insights,tables= run_agent3_pipeline(text)
+        summary, insights,tables= FinancialDocumentInterpreter.run(text)
 
         generated_insight = GeneratedInsight.objects.create(file=user_file, summary=summary, insights=insights)
 
         # --- Agent 4 (NEW) ---
         charts=[]
         if tables:
-            charts = run_agent4(tables)
+            charts = ChartGeneratorAgent.generate_charts(tables)
             print(f"charts :: {charts}")
             Visualization.objects.filter(file=user_file).delete()
             for cfg in charts:
@@ -89,7 +89,7 @@ def preprocess_file_task(file_id):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         output_path = output_dir / f"report_{user_file.id}.pdf"
-        pdf=generate_pdf_report(summary,insights,charts,output_path=str(output_path))
+        pdf=ReportGeneratorAgent.generate_report(summary,insights,charts,output_path=str(output_path))
         GeneratedReports.objects.create(
             raw_file=user_file,
             report_file=f"reports/report_{user_file.file_name}"

@@ -10,6 +10,7 @@ from django.contrib.auth.models import(
     Group,
     AbstractBaseUser
 )
+from django.core.validators import RegexValidator
 from django.db import models
 from .enums.company_enums import Sector, SubSector
 from datetime import datetime, date, timedelta
@@ -47,9 +48,11 @@ class User(AbstractBaseUser,PermissionsMixin):
     updated_at=models.DateTimeField(auto_now=True)
     deleted_at=models.DateTimeField(null=True)
     deleted=models.BooleanField(default=False)
-    # auth_id=
     email=models.EmailField(max_length=225,unique=True,db_index=True)
     name=models.CharField(max_length=255)
+    dob=models.DateField(null=True,blank=True)
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$',message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True,null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

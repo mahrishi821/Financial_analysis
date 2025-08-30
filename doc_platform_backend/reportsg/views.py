@@ -1,13 +1,7 @@
 import os
-import tempfile
-from urllib import request
-
-from django.template.loader import render_to_string
-from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from common.jsonResponse.response import JSONResponseSender
@@ -18,9 +12,9 @@ from common.serializers import (
     AssetAnalysisSerializer,
     ReportSerializer,
 )
-from .utils import extract_text_from_file
-from .tasks import preprocess_file_task
-from .AssetAnalysisAi import run_asset_analysis
+from .utils.tasks import preprocess_file_task
+from .utils.AssetAnalysis import FinancialAnalysisPipeline
+
 
 class UserFileListView(ListAPIView):
     queryset = UserFile.objects.all().order_by('-created_at')
@@ -95,7 +89,7 @@ class AssetAnalysisViewSet(viewsets.ModelViewSet):
             analysis = serializer.save()
             asset_query = serializer.validated_data["asset_query"]
             try:
-                result = run_asset_analysis(asset_query, work_dir=f"./coding/asset_analysis_{analysis.id}")
+                result = FinancialAnalysisPipeline.run_analysis(asset_query, work_dir=f"./coding/asset_analysis_{analysis.id}")
                 if result.get("report"):
                     return JSONResponseSender.send_success({"id": analysis.id,"asset_query": asset_query,"report": result["report"],"figures": result["figures"],"query_datetime": analysis.query_datetime})
                 else:

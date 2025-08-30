@@ -8,7 +8,6 @@ import win32com.client
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from docx2pdf import convert
 
-
 class DocumentParaphraser:
     def _ocr_single_page(self, doc, page_num, temp_dir):
         """Run OCRmyPDF --force-ocr on a single page and return the text."""

@@ -1,7 +1,7 @@
 import os
-from common.third_party_integration.doc_paraphraser import DocumentParaphraser
-from common.third_party_integration.pdf_paraphraser import Paraphrasepdf
-from common.third_party_integration.excel_pharaphraser import ExcelDataProcessor
+from common.utils.doc_paraphraser import DocumentParaphraser
+from common.utils.pdf_paraphraser import Paraphrasepdf
+from common.utils.excel_pharaphraser import ExcelDataProcessor
 
 
 class FileTextExtractor:
