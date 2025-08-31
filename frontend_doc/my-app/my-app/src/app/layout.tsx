@@ -2,6 +2,7 @@ import "./globals.css";
 import { ReactNode } from "react";
 import { CompanyProvider } from "@/context/CompanyContext";
 import { UserProvider } from "@/context/UserContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
   title: "Doc Platform",
@@ -12,11 +13,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <UserProvider>
-          <CompanyProvider>
-            {children}
-          </CompanyProvider>
-        </UserProvider>
+        <AuthProvider>
+          <UserProvider>
+            <CompanyProvider>
+              {children}
+            </CompanyProvider>
+          </UserProvider>
+        </AuthProvider>
       </body>
     </html>
   );

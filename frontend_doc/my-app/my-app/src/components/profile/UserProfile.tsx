@@ -2,12 +2,14 @@
 import React from "react";
 import { Calendar, Mail, Phone, User, LogOut } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const UserProfile: React.FC = () => {
   const user = useUser();
+  const { logout } = useAuth();
+  
   const handleLogout = () => {
-    // attach real logout later
-    console.log("User logged out");
+    logout();
   };
 
   return (
