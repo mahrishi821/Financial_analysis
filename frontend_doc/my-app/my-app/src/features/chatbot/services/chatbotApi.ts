@@ -1,6 +1,8 @@
 // src/features/chatbot/services/chatbotApi.ts
 // Minimal API client and React hook for the chatbot endpoints
 
+import api from "@/service/api";
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -40,53 +42,43 @@ export interface UploadedDoc {
   error?: string;
 }
 
-class ChatbotApiService {
-  private baseUrl: string;
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_API_BASE || '/api';
+// Helper to handle both wrapped {success, data} responses and plain payloads
+function unwrapOrThrow<T>(payload: any, defaultError: string): T {
+  if (payload && typeof payload === 'object' && 'success' in payload) {
+    const resp = payload as ApiResponse<T>;
+    if (!resp.success) throw new Error(resp.message || defaultError);
+    return resp.data as T;
   }
+  return payload as T;
+}
 
+class ChatbotApiService {
   async uploadDocument(file: File): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await fetch(`${this.baseUrl}/chatbot/upload/`, {
-      method: 'POST',
-      body: formData,
-    });
-    const json: ApiResponse<UploadResponse> = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || 'Upload failed');
-    return json.data as UploadResponse;
+    const res = await api.post('/chatbot/upload/', formData);
+    return unwrapOrThrow<UploadResponse>(res.data, 'Upload failed');
   }
 
   async processDocument(uploadId: number): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/chatbot/process/${uploadId}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const json: ApiResponse<{}> = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || 'Processing failed');
+    const res = await api.post(`/chatbot/process/${uploadId}/`);
+    // If wrapped, will throw on !success; otherwise HTTP ok is enough
+    unwrapOrThrow<{}>(res.data, 'Processing failed');
   }
 
   async queryDocument(uploadId: number, question: string): Promise<QueryResponse> {
-    const res = await fetch(`${this.baseUrl}/chatbot/query/${uploadId}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
-    });
-    const json: ApiResponse<QueryResponse> = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || 'Query failed');
-    return json.data as QueryResponse;
+    const res = await api.post(`/chatbot/query/${uploadId}/`, { question });
+    return unwrapOrThrow<QueryResponse>(res.data, 'Query failed');
   }
 
   async getChatHistory(uploadId: number): Promise<ChatSessionDto[]> {
-    const res = await fetch(`${this.baseUrl}/chatbot/history/${uploadId}/`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const json: ApiResponse<ChatSessionDto[]> = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || 'History failed');
-    return (json.data || []) as ChatSessionDto[];
+    const res = await api.get(`/chatbot/history/${uploadId}/`);
+    try {
+      return unwrapOrThrow<ChatSessionDto[]>(res.data, 'History failed') || [];
+    } catch (e) {
+      throw e;
+    }
   }
 
   async uploadAndProcessDocument(

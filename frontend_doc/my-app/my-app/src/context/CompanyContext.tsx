@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Company } from "@/types";
-import { http } from "@/lib/fetchClient";
+import api from "@/service/api";
 
 type CompanyState = {
   companies: Company[];
@@ -18,8 +18,8 @@ export const CompanyProvider: React.FC<React.PropsWithChildren> = ({ children })
 
   const refresh = async () => {
     try {
-      const data = await http.get<Company[]>("/api/companies/");
-      setCompanies(data);
+      const res = await api.get<Company[]>("/companies/");
+      setCompanies(res.data as any);
     } catch (err) {
       console.error("Error fetching companies", err);
       setCompanies([]);

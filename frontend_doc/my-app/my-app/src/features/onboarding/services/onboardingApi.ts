@@ -1,4 +1,4 @@
-import { http } from "@/lib/fetchClient";
+import api from "@/service/api";
 
 export type OnboardingPayload = {
   company_name: string;
@@ -14,5 +14,8 @@ export type OnboardingPayload = {
 };
 
 export const onboardingApi = {
-  createCompany: (payload: OnboardingPayload) => http.post<OnboardingPayload, any>("/api/companies/", payload),
+  createCompany: async (payload: OnboardingPayload) => {
+    const res = await api.post("/companies/", payload);
+    return res.data;
+  },
 };

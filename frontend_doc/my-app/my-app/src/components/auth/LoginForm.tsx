@@ -4,8 +4,8 @@ import { Eye, EyeOff, Shield, Lock, User, Mail, Phone, Calendar } from "lucide-r
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/context/AuthContext";
 import Cookies from "js-cookie";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+import { loginApi, signupApi } from "@/service/api/auth";
+const API_BASE =  "http://localhost:8000/api";
 
 const FinancialAuthForm = () => {
   const router = useRouter();
@@ -42,19 +42,7 @@ const FinancialAuthForm = () => {
     setLoginLoading(true);
     setLoginError("");
     try {
-      const res = await fetch(`${API_BASE}/login/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include", // include in case backend sets httpOnly cookies
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Login failed");
-      }
-
-      const data = await res.json();
+      const data = await loginApi(email, password);
       console.log("Login success:", data);
 
       // Normalize token keys from various backends
@@ -90,18 +78,7 @@ const FinancialAuthForm = () => {
     setSignupLoading(true);
     setSignupError("");
     try {
-      const res = await fetch(`${API_BASE}/auth/signup/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Signup failed");
-      }
-
-      await res.json();
+      await signupApi(data);
       setSuccess("Account created! Please verify your email.");
       setTimeout(() => setIsLogin(true), 2000);
     } catch (error: any) {

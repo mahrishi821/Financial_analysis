@@ -1,11 +1,14 @@
-import { http } from "@/lib/fetchClient";
+import api from "@/service/api";
 
 export const documentApi = {
-  uploadZip: (companyId: string, file: File) => {
+  uploadZip: async (companyId: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
     form.append("company", companyId);
     form.append("company_id", companyId);
-    return http.postForm("/api/upload-zip/", form);
+    const res = await api.post("/upload-zip/", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
   },
 };

@@ -1,6 +1,6 @@
-import { http } from "@/lib/fetchClient";
+import api from "@/service/api";
 
 export const financialApi = {
   // Placeholder if you later post parsed statements etc.
-  // uploadFinancials: (form: FormData) => http.postForm("/api/financials/upload/", form),
+  // uploadFinancials: (form: FormData) => api.post("/financials/upload/", form),
 };
