@@ -42,12 +42,13 @@ const FinancialAuthForm = () => {
     setLoginLoading(true);
     setLoginError("");
     try {
-      const data = await loginApi(email, password);
-      console.log("Login success:", data);
+      const response = await loginApi(email, password);
 
-      // Normalize token keys from various backends
-      const access: string | undefined = data.access || data.access_token || data.token;
-      const refresh: string | undefined = data.refresh || data.refresh_token;
+       const { access, refresh } = response.data;
+       console.log("access token",access)
+       console.log("refresh token",refresh)
+
+
 
       if (access && refresh) {
         // Store via context (writes localStorage + cookies and redirects)
