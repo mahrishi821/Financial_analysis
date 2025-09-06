@@ -67,3 +67,10 @@ class LogoutView(APIView):
         except Exception as e:
             return JSONResponseSender.send_error(500, str(e), str(e))
 
+class UserInfoView(APIView):
+    def get(self,request):
+        try:
+            user=request.user
+            return JSONResponseSender.send_success({"email":user.email,"name":user.name})
+        except Exception as e :
+            return JSONResponseSender.send_error("500",str(e),str(e))

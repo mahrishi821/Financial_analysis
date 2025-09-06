@@ -18,11 +18,13 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserInfo } from "@/hooks/useUserInfo";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
   const { logout } = useAuth();
+  const { user, loading: userLoading, initials } = useUserInfo();
 
   const navigationItems = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -105,11 +107,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                 >
                   <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">JD</span>
+                    <span className="text-white text-sm font-semibold">{(initials || user?.name || "JD").slice(0,2).toUpperCase()}</span>
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-gray-900">John Doe</p>
-                    <p className="text-xs text-gray-500">john@example.com</p>
+                    <p className="text-sm font-medium text-gray-900">{user?.name || (userLoading ? "Loading..." : "Account")}</p>
+                    <p className="text-xs text-gray-500">{user?.email || ""}</p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-500" />
                 </button>
