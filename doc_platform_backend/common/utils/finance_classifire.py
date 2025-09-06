@@ -1,41 +1,57 @@
 import os
 import requests
+import pandas as pd
+from transformers import AutoTokenizer
 
 class FinancialTextClassifier:
-    def __init__(self, hf_token: str = None, bart_threshold: float = 0.7):
-        """
-        hf_token: Hugging Face API token (set via arg or environment variable HF_TOKEN)
-        bart_threshold: probability threshold for financial classification
-        """
-        # self.api_url = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli"
-        self.api_url = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli"
+    def __init__(self, hf_token: str = None, prob_threshold: float = 0.6):
+        self.api_url = "https://api-inference.huggingface.co/models/ProsusAI/finbert"
         self.headers = {
             "Authorization": f"Bearer {hf_token or os.environ.get('HF_TOKEN')}"
         }
-        self.bart_threshold = bart_threshold
+        self.prob_threshold = prob_threshold
+
+        # Tokenizer ensures proper chunking
+        self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+
+
+    def chunk_text(self, text: str, max_length: int = 512):
+        """Split text into chunks within model's max length"""
+        tokens = self.tokenizer.encode(text, add_special_tokens=False)
+        for i in range(0, len(tokens), max_length):
+            yield self.tokenizer.decode(tokens[i:i+max_length])
 
     def is_financial(self, text: str) -> bool:
-        """
-        Returns True if the text is financial, otherwise False.
-        """
-        print(f"Inside the FinancialTextClassifier ")
-        if not text or not text.strip():
-            return False
+        try:
+            if not text or not text.strip():
+                return False
 
-        payload = {
-            "inputs": text,
-            "parameters": {"candidate_labels": ["financial", "legal", "medical", "general"]},
-        }
+            positive_chunks = 0
+            total_chunks = 0
 
-        response = requests.post(self.api_url, headers=self.headers, json=payload)
-        result = response.json()
+            for chunk in self.chunk_text(text, max_length=510):
+                total_chunks += 1
+                payload = {"inputs": chunk,
+                           "parameters": {"truncation": True, "max_length": 512}}
+                response = requests.post(self.api_url, headers=self.headers, json=payload)
+                result = response.json()
 
-        if "labels" not in result:
-            # Handle API error
-            return False
+                if isinstance(result, dict) and "error" in result:
+                    continue
+                if isinstance(result, list) and len(result) > 0 and isinstance(result[0], list):
+                    result = result[0]
 
+                if isinstance(result, list) and result:
+                    best = max(result, key=lambda x: x["score"])
+                    top_label, top_score = best["label"], best["score"]
 
-        top_label, top_score = result["labels"][0], result["scores"][0]
-        # print(f"Top label: {top_label}")
-        # print(f"Top score: {top_score}")
-        return top_label == "financial" and top_score >= self.bart_threshold
+                    if top_label in ("neutral", "positive") and top_score >= 0.8:
+                        positive_chunks += 1
+
+            print(f"[Decision] {positive_chunks}/{total_chunks} chunks passed")
+
+            # Require at least 2 positive chunks
+            return positive_chunks >= 2
+
+        except Exception as e:
+            return str(e)

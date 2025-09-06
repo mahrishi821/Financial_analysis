@@ -94,7 +94,7 @@ def preprocess_file_task(file_id):
             raw_file=user_file,
             report_file=f"reports/report_{user_file.file_name}"
         )
-
+        GeneratedReports.save()
         return "Report generated Successfully"
 
     except Exception as e:

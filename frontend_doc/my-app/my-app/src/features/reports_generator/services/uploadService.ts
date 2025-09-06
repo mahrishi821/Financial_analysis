@@ -16,7 +16,6 @@ export async function uploadReportFile(file: File): Promise<UploadResult> {
   try {
     const res = await api.post("/upload/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-      timeout: 60_000,
     });
     return { ok: true, data: res.data };
   } catch (err: any) {
@@ -40,7 +39,7 @@ export type ReportListItem = {
 
 export async function listReports(): Promise<UploadResult & { data?: ReportListItem[] }> {
   try {
-    const res = await api.get("/files/");
+    const res = await api.get("/reports/");
     return { ok: true, data: (res.data as ReportListItem[]) };
   } catch (err: any) {
     const status = err?.response?.status;
