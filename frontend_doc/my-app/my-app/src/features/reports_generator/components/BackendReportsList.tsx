@@ -56,13 +56,13 @@ export default function BackendReportsList({ refreshToken = 0 }: { refreshToken?
           <div className="p-4 text-gray-500">No reports yet</div>
         )}
         {items.map((f) => (
-          <div key={f.raw_file.id} className="p-4 flex items-center justify-between">
+          <div key={f.id} className="p-4 flex items-center justify-between">
             <div>
               <div className="font-medium flex items-center">
-                {f.raw_file.file_name}
+                {f.file_name}
               </div>
               <div className="text-sm text-gray-500">
-                {new Date(f.created_at || f.raw_file.created_at).toLocaleString()}
+                {new Date(f.created_at).toLocaleString()}
               </div>
             </div>
             <a href={f.report_file} target="_blank" rel="noreferrer" className="text-blue-600 flex items-center">

@@ -66,6 +66,7 @@ class GeneratedReportViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
 
         query_set=GeneratedReports.objects.filter(raw_file__created_by=self.request.user).order_by("-created_at")
+        print(f"query set :{query_set}")
         return query_set
 
 

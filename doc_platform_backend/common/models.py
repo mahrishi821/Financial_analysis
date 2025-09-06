@@ -233,6 +233,7 @@ class Visualization(models.Model):
 class GeneratedReports(models.Model):
     raw_file=models.ForeignKey(UserFile,on_delete=models.CASCADE,related_name='uploaded_file')
     created_at=models.DateTimeField(auto_now_add=True)
+    file_name=models.CharField(max_length=200,null=True)
     report_file=models.FileField(upload_to="reports/",null=True,blank=True)
 
     def __str__(self):

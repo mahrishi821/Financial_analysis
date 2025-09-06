@@ -121,8 +121,8 @@ class ReportSerializer(serializers.ModelSerializer):
 class GeneratedReportsSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneratedReports
-        fields = ['report_file', 'created_at']
-        read_only_fields = ['created_at']
+        fields = ['id','report_file', 'created_at','file_name']
+        read_only_fields = ['created_at','id']
 
 
 

@@ -10,7 +10,9 @@ from ..agents.agent1 import FinancialDocumentInterpreter
 from pathlib import Path
 from django.core.files import File
 
-
+FDI=FinancialDocumentInterpreter()
+CGI=ChartGeneratorAgent()
+RGA=ReportGeneratorAgent()
 def dataframe_to_json_serializable(df: pd.DataFrame):
     # Replace all NaN/NaT with None
     df = df.replace({np.nan: None})
@@ -44,13 +46,14 @@ def preprocess_file_task(file_id):
             file_bytes = f.read()
         text, file_type = extract_text_from_file(file_path, file_bytes)
 
-        if  not is_financial_text(text) :
+        if  is_financial_text(text)==False :
 
             user_file.is_valid = False
             user_file.status="declined"
             user_file.validation_reason = "Document not financial"
             user_file.save()
             return "Not financial"
+
         sections = {"narrative": text}
 
         extracted = ExtractedData.objects.create(
@@ -64,14 +67,15 @@ def preprocess_file_task(file_id):
         user_file.validation_reason = "Financial document detected"
         user_file.save()
 
-        summary, insights,tables= FinancialDocumentInterpreter.run(text)
+        summary, insights,tables= FDI.run(text)
+        print(f"Summary : {summary} \n  insights: {insights} \n tables : {tables}")
 
         generated_insight = GeneratedInsight.objects.create(file=user_file, summary=summary, insights=insights)
 
         # --- Agent 4 (NEW) ---
         charts=[]
         if tables:
-            charts = ChartGeneratorAgent.generate_charts(tables)
+            charts = CGI.generate_charts(tables)
             print(f"charts :: {charts}")
             Visualization.objects.filter(file=user_file).delete()
             for cfg in charts:
@@ -89,12 +93,14 @@ def preprocess_file_task(file_id):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         output_path = output_dir / f"report_{user_file.id}.pdf"
-        pdf=ReportGeneratorAgent.generate_report(summary,insights,charts,output_path=str(output_path))
+        pdf=RGA.generate_report(summary,insights,charts,output_path=str(output_path))
         GeneratedReports.objects.create(
             raw_file=user_file,
-            report_file=f"reports/report_{user_file.file_name}"
+            report_file=f"{output_path}",
+            file_name=f"{user_file.file_name}_report.pdf",
         )
-        GeneratedReports.save()
+        print(f"pdf :{pdf}")
+
         return "Report generated Successfully"
 
     except Exception as e:
