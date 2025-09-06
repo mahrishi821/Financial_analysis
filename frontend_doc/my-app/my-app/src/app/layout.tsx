@@ -1,8 +1,9 @@
 import "./globals.css";
 import { ReactNode } from "react";
-import { CompanyProvider } from "@/context/CompanyContext";
-import { UserProvider } from "@/context/UserContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { UserProvider } from "@/context/UserContext";
+
+
 
 export const metadata = {
   title: "Doc Platform",
@@ -15,9 +16,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AuthProvider>
           <UserProvider>
-            <CompanyProvider>
+
               {children}
-            </CompanyProvider>
+
           </UserProvider>
         </AuthProvider>
       </body>

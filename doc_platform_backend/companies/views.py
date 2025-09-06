@@ -14,11 +14,14 @@ class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all().order_by('-created_at')
     serializer_class = CompanySerializer
 
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
     @action(detail=False, methods=['get'])
     def company_count(self,request):
         try:
             user=request.user
             company_count = Company.objects.all().filter(created_by=user).count()
+            print(f"company count by the user :: {user.name} ,company count :: {company_count}")
             return JSONResponseSender.send_success( {"company_count":company_count})
         except Exception as e:
             return JSONResponseSender.send_error("500", str(e),str(e))
