@@ -96,7 +96,8 @@ def preprocess_file_task(file_id):
         pdf=RGA.generate_report(summary,insights,charts,output_path=str(output_path))
         GeneratedReports.objects.create(
             raw_file=user_file,
-            report_file=f"{output_path}",
+            # report_file=f"{output_path}",
+            report_file=f"reports/report_{user_file.id}.pdf",
             file_name=f"{user_file.file_name}_report.pdf",
         )
         print(f"pdf :{pdf}")
