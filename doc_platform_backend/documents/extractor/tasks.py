@@ -1,175 +1,3 @@
-# import json
-# import io
-# import uuid
-# import tempfile
-# import os
-# import subprocess
-# import pandas as pd
-# import fitz  # PyMuPDF
-# from PIL import Image
-# from openpyxl import load_workbook
-# from django.core.files.storage import default_storage
-# from documents.models import UploadedFile, SheetUnit, AuditLog
-# from ..classifier.tasks import rule_based_classify
-#
-# MAX_INLINE_ROWS = 300  # threshold for saving raw_table inline vs csv pointer
-# CHUNK_ROWS = 200
-#
-#
-# # -------------------------------
-# # 🔹 Header detection with context
-# # -------------------------------
-# def detect_header_and_samples(df, max_header_search=15, sample_limit=20, max_header_rows=2):
-#     """
-#     Detects header rows and sample rows in a dataframe using heuristics.
-#     Also returns pre-header context (rows above detected header).
-#     """
-#     row_count, col_count = df.shape
-#     non_empty_rows = [i for i in range(row_count) if df.iloc[i].notna().any()]
-#
-#     if not non_empty_rows:
-#         return [], [], []
-#
-#     def score_row(row_idx):
-#         values = [str(v).strip() for v in df.iloc[row_idx].tolist()]
-#         non_empty = sum(1 for v in values if v)
-#         text_like = sum(1 for v in values if v.isalpha())
-#         num_like = sum(1 for v in values if v.replace(".", "", 1).isdigit())
-#         return non_empty + text_like - num_like
-#
-#     # Step 1: score first N rows
-#     candidates = non_empty_rows[:max_header_search]
-#     scores = {r: score_row(r) for r in candidates}
-#     header_row_idx = max(scores, key=scores.get)
-#
-#     # Step 2: allow multi-row headers
-#     header_rows = [list(df.iloc[header_row_idx].tolist())]
-#     if max_header_rows > 1 and (header_row_idx + 1 < row_count):
-#         next_score = score_row(header_row_idx + 1)
-#         if next_score >= scores[header_row_idx] * 0.7:  # threshold heuristic
-#             header_rows.append(list(df.iloc[header_row_idx + 1].tolist()))
-#
-#     # Step 3: pre-header context = non-empty rows before detected header
-#     pre_header_context = [
-#         list(df.iloc[r].tolist())
-#         for r in non_empty_rows
-#         if r < header_row_idx
-#     ]
-#
-#     # Step 4: collect sample rows after headers
-#     last_header_row = header_row_idx + len(header_rows) - 1
-#     sample_rows = [
-#         list(df.iloc[r].tolist())
-#         for r in non_empty_rows
-#         if r > last_header_row
-#     ][:sample_limit]
-#
-#     return header_rows, sample_rows, pre_header_context
-#
-#
-# def task_extract_workbook(uploaded_file_id):
-#     uploaded = UploadedFile.objects.get(file_id=uploaded_file_id)
-#     file_obj = uploaded.s3_path
-#
-#     # Step 1: Try loading Excel with pandas
-#     try:
-#         xls = pd.ExcelFile(file_obj)
-#     except Exception as e:
-#         AuditLog.objects.create(sheet_unit=None, action="extract_error", details={"error": str(e)})
-#         raise
-#
-#     # Step 2: Also open with openpyxl for charts/images
-#     try:
-#         wb = load_workbook(file_obj)
-#     except Exception as e:
-#         wb = None
-#         AuditLog.objects.create(sheet_unit=None, action="openpyxl_error", details={"error": str(e)})
-#
-#     for sheet_name in xls.sheet_names:
-#         # --- Extract raw table ---
-#         df = xls.parse(sheet_name, header=None, dtype=str).fillna("")
-#         row_count, col_count = df.shape
-#
-#         # ✅ Use new detection with pre_header_context
-#         header_rows, sample_rows, pre_header_context = detect_header_and_samples(df)
-#
-#         # Decide whether to embed raw_table or save CSV
-#         if row_count <= MAX_INLINE_ROWS:
-#             raw_table = df.values.tolist()
-#         else:
-#             tmp_csv = io.StringIO()
-#             df.to_csv(tmp_csv, index=False, header=False)
-#             csv_bytes = tmp_csv.getvalue().encode()
-#             object_name = f"uploaded_raw_tables/{uploaded.file_id}/{uuid.uuid4()}.csv"
-#             default_storage.save(object_name, io.BytesIO(csv_bytes))
-#             raw_table = {"csv_pointer": object_name}
-#
-#         # --- Extract metadata: charts + images (if available) ---
-#         charts_info, ocr_results = {}, {}
-#         if wb:
-#             ws = wb[sheet_name]
-#             charts_info[sheet_name] = len(getattr(ws, "_charts", []))
-#             extracted_texts = []
-#             for img in getattr(ws, "_images", []):
-#                 try:
-#                     img_bytes = img._data()
-#                     image = Image.open(io.BytesIO(img_bytes))
-#                     with tempfile.TemporaryDirectory() as tmp_dir:
-#                         pdf_path = os.path.join(tmp_dir, "img.pdf")
-#                         ocr_pdf_path = os.path.join(tmp_dir, "img_ocr.pdf")
-#                         image.convert("RGB").save(pdf_path)
-#
-#                         subprocess.run(
-#                             ["ocrmypdf", "--force-ocr", pdf_path, ocr_pdf_path],
-#                             check=True, capture_output=True
-#                         )
-#
-#                         doc = fitz.open(ocr_pdf_path)
-#                         ocr_text = "\n".join([page.get_text().strip() for page in doc])
-#                         doc.close()
-#
-#                         if ocr_text.strip():
-#                             extracted_texts.append(ocr_text.strip())
-#                 except Exception as e:
-#                     extracted_texts.append(f"[OCR Error: {str(e)}]")
-#
-#             if extracted_texts:
-#                 ocr_results[sheet_name] = extracted_texts
-#
-#         metadata = {
-#             "charts": charts_info,
-#             "ocr_from_images": ocr_results,
-#             "pre_header_context": pre_header_context
-#         }
-#
-#         # --- Save to DB ---
-#         sheet_unit = SheetUnit.objects.create(
-#             uploaded_file=uploaded,
-#             sheet_name=sheet_name,
-#             row_count=row_count,
-#             col_count=col_count,
-#             header_rows=header_rows,
-#             sample_rows=sample_rows,
-#             raw_table=raw_table,
-#             metadata=metadata
-#         )
-#         AuditLog.objects.create(
-#             sheet_unit=sheet_unit,
-#             action="sheet_extracted",
-#             details={
-#                 "rows": row_count,
-#                 "cols": col_count,
-#                 "charts": charts_info.get(sheet_name, 0),
-#                 "header_detected": header_rows[:2],
-#                 "pre_header_count": len(pre_header_context)
-#             }
-#         )
-#         # from django.forms.models import model_to_dict
-#         # print(f"Sheet Unit : {json.dumps(model_to_dict(sheet_unit), indent=2, default=str)}")
-#
-#         rule_based_classify(header_rows,sample_rows,metadata["pre_header_context"])
-#
-
 import json
 import io
 import uuid
@@ -183,7 +11,7 @@ from PIL import Image
 from openpyxl import load_workbook
 from django.core.files.storage import default_storage
 from documents.models import UploadedFile, SheetUnit, AuditLog
-from ..classifier.tasks import rule_based_classify
+from ..classifier.tasks import SheetClassifier
 
 MAX_INLINE_ROWS = 300
 CHUNK_ROWS = 200
@@ -421,20 +249,16 @@ def task_extract_workbook(uploaded_file_id):
 
             # Representative rows for classification
             representative_rows = get_representative_rows(table["raw_table"], count=2)
-
+            print(f"\n=== Processing sheet: {sheet_name}, Table {idx}/{len(detected_tables)} ===")
             print(f"headers_row : {table['header_rows']}")
             print(f"sample_rows : {table['sample_rows']}")
             print(f"raw_table : {table['raw_table']}")
             print(f"pre_header_context : {table['pre_header_context']}")
             print(f"bounding_box : {table['bounding_box']}")
             print(f"representative rows: {representative_rows}")
-            # Run classification
-            # rule_based_classify(
-            #     header_rows=table["header_rows"],
-            #     sample_rows=table["sample_rows"],
-            #     pre_header_context=table["pre_header_context"],
-            #     bounding_box=table["bounding_box"],
-            #     representative_rows=representative_rows
-            # )
+            print(f"charts : {charts_info.get(sheet_name, 0)}")
+            classifier = SheetClassifier()
+            classifier.classify(sheet_unit.id)
 
-    return ""
+
+    # return ""
