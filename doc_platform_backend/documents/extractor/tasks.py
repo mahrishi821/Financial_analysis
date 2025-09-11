@@ -249,14 +249,14 @@ def task_extract_workbook(uploaded_file_id):
 
             # Representative rows for classification
             representative_rows = get_representative_rows(table["raw_table"], count=2)
-            print(f"\n=== Processing sheet: {sheet_name}, Table {idx}/{len(detected_tables)} ===")
-            print(f"headers_row : {table['header_rows']}")
-            print(f"sample_rows : {table['sample_rows']}")
-            print(f"raw_table : {table['raw_table']}")
-            print(f"pre_header_context : {table['pre_header_context']}")
-            print(f"bounding_box : {table['bounding_box']}")
-            print(f"representative rows: {representative_rows}")
-            print(f"charts : {charts_info.get(sheet_name, 0)}")
+            # print(f"\n=== Processing sheet: {sheet_name}, Table {idx}/{len(detected_tables)} ===")
+            # print(f"headers_row : {table['header_rows']}")
+            # print(f"sample_rows : {table['sample_rows']}")
+            # print(f"raw_table : {table['raw_table']}")
+            # print(f"pre_header_context : {table['pre_header_context']}")
+            # print(f"bounding_box : {table['bounding_box']}")
+            # print(f"representative rows: {representative_rows}")
+            # print(f"charts : {charts_info.get(sheet_name, 0)}")
             classifier = SheetClassifier()
             classifier.classify(sheet_unit.id)
 
